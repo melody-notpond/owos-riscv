@@ -9,7 +9,7 @@ all: boot
 
 boot: $(CODE)boot/*.s
 	mkdir -p obj/boot/
-	mkdir build
+	mkdir -p build
 	$(CC) $(CFLAGS) -c $?
 	mv *.o obj/boot/
 	$(CC) $(CFLAGS) obj/boot/*.o -o build/boot
