@@ -1,4 +1,4 @@
-.set UART_BASE, 0x10010000
+.set UART_BASE, 0x10000000
 
 .section .text
 .globl puts
