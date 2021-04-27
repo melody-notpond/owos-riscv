@@ -2,7 +2,7 @@ CODE=src/
 CC=riscv64-unknown-elf-gcc
 CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld
 EMU=qemu-system-riscv64
-EFLAGS=--machine virt --bios none --device "cirrus-vga" --monitor stdio --serial /dev/stdout
+EFLAGS=--machine virt --bios none --nographic
 
 all: boot
 	$(EMU) $(EFLAGS) --kernel build/boot

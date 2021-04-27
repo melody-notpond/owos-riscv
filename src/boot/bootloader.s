@@ -6,10 +6,8 @@ _start:
     csrr t0, mhartid
     bnez t0, finish
 
-    jal gpu_init
-
     la a0, msg
-    jal puts
+    jal uart_puts
 
 finish:
     j finish
@@ -19,3 +17,4 @@ finish:
 msg:
     .string "hewwo wowwd\r\n"
     .byte 0
+
