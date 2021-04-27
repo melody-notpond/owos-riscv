@@ -6,6 +6,8 @@ _start:
     csrr t0, mhartid
     bnez t0, finish
 
+    jal gpu_init
+
     la a0, msg
     jal puts
 
@@ -15,5 +17,5 @@ finish:
 
 .section .rodata
 msg:
-    .string "hewwo wowwd\n"
+    .string "hewwo wowwd\r\n"
     .byte 0
