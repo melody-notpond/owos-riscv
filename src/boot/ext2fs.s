@@ -23,74 +23,32 @@ static const MemMapEntry sifive_u_memmap[] = {
 };
 */
 
-.set UART_BASE, 0x10010000
-
 .section .text
-.global uart_init
-.global loader_uart_puts
-.global loader_uart_getc
+.global ext2fs_load_kernel
 
 
-# uart_init(void) -> void
-# Initialises the 16550a UART chip.
+# ext2fs_load_kernel(void) -> void
+# Loads the kernel from an ext2 file system.
 #
 # Parameters: nothing
 # Returns: nothing
-uart_init:
-    # QEMU automatically sets up the registers for us
-    # Except possibly the interrupt register (idk if that is set up to no interrupts)
-    # So we set up the interrupt register for it
-    li t0, UART_BASE
+ext2fs_load_kernel:
+    # Push the return address
+    addi sp, sp, -0x8
+    sd ra, 0x0(sp)
 
-    # R - interrupt on Received
-    # T - interrupt on Transmit
-    #              RT
-    li t1, 0b00000000
-    sw t1, 0x10(t0)
+    # Tell user that SD is being loaded and booted into
+    la a0, loading_kernel_msg
+    jal loader_uart_puts
 
+    # Return
+    ld ra, 0x0(sp)
+    addi sp, sp, 0x8
     ret
 
 
-# loader_uart_puts(char*) -> void
-# Puts a string onto the UART port.
-#
-# Parameters:
-# a0: char*     - The pointer to the null terminated string to be printed out.
-# Returns: nothing
-loader_uart_puts:
-    li t0, UART_BASE
-
-puts_loop:
-    lbu a1, 0x00(a0)
-    beqz a1, puts_end
-
-puts_wait:
-    lw t1, 0x00(t0)
-    bnez t1, puts_wait
-
-    sw a1, 0x00(t0)
-
-    addi a0, a0, 1
-    j puts_loop
-
-puts_end:
-    ret
-
-
-# loader_uart_getc(void) -> char
-# Gets a character from the UART port.
-#
-# Parameters: nothing
-# Returns:
-# a0: char      - The last character received.
-loader_uart_getc:
-    li t0, UART_BASE
-
-getc_loop:
-    lw a0, 0x04(t0)
-    beqz a0, getc_loop
-
-    sw a0, 0x00(t0)
-    sw zero, 0x04(t0)
-    ret
+.section .rodata
+loading_kernel_msg:
+    .string "Loading kernel from SD...\n"
+    .byte 0
 

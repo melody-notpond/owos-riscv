@@ -2,10 +2,10 @@ CODE=src/
 CC=riscv64-unknown-elf-gcc
 CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld
 EMU=qemu-system-riscv64
-EFLAGS=--machine sifive_u --bios none --nographic
+EFLAGS=--machine sifive_u --bios none --nographic -m 6g
 
 all: boot iso
-	$(EMU) $(EFLAGS) --kernel build/boot
+	$(EMU) $(EFLAGS) --kernel build/boot --drive format=raw,file=build/sd.iso
 
 run:
 	$(EMU) $(EFLAGS) --kernel build/boot
