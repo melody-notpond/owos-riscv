@@ -33,12 +33,18 @@ static const MemMapEntry sifive_u_memmap[] = {
 
 # uart_init(void) -> void
 # Initialises the 16550a UART chip.
+#
+# Parameters: nothing
+# Returns: nothing
 uart_init:
     # QEMU automatically sets up the registers for us
     # Except possibly the interrupt register (idk if that is set up to no interrupts)
     # So we set up the interrupt register for it
     li t0, UART_BASE
 
+    # R - interrupt on Received
+    # T - interrupt on Transmit
+    #              RT
     li t1, 0b00000000
     sw t1, 0x10(t0)
 
@@ -47,6 +53,8 @@ uart_init:
 
 # uart_puts(char*) -> void
 # Puts a string onto the UART port.
+#
+# Parameters:
 # a0: char*     - The pointer to the null terminated string to be printed out.
 # Returns: nothing
 uart_puts:
@@ -56,7 +64,6 @@ puts_loop:
     lbu a1, 0x00(a0)
     beqz a1, puts_end
 
-    # TODO: timings for hardware
 puts_wait:
     lw t1, 0x00(t0)
     bnez t1, puts_wait
@@ -72,6 +79,8 @@ puts_end:
 
 # uart_getc(void) -> char
 # Gets a character from the UART port.
+#
+# Parameters: nothing
 # Returns:
 # a0: char      - The last character received.
 uart_getc:
