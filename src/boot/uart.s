@@ -1,29 +1,4 @@
-/*
-
-static const MemMapEntry sifive_u_memmap[] = {
-    [SIFIVE_U_DEV_DEBUG] =    {        0x0,      0x100 },
-    [SIFIVE_U_DEV_MROM] =     {     0x1000,     0xf000 },
-    [SIFIVE_U_DEV_CLINT] =    {  0x2000000,    0x10000 },
-    [SIFIVE_U_DEV_L2CC] =     {  0x2010000,     0x1000 },
-    [SIFIVE_U_DEV_PDMA] =     {  0x3000000,   0x100000 },
-    [SIFIVE_U_DEV_L2LIM] =    {  0x8000000,  0x2000000 },
-    [SIFIVE_U_DEV_PLIC] =     {  0xc000000,  0x4000000 },
-    [SIFIVE_U_DEV_PRCI] =     { 0x10000000,     0x1000 },
-    [SIFIVE_U_DEV_UART0] =    { 0x10010000,     0x1000 },
-    [SIFIVE_U_DEV_UART1] =    { 0x10011000,     0x1000 },
-    [SIFIVE_U_DEV_QSPI0] =    { 0x10040000,     0x1000 },
-    [SIFIVE_U_DEV_QSPI2] =    { 0x10050000,     0x1000 },
-    [SIFIVE_U_DEV_GPIO] =     { 0x10060000,     0x1000 },
-    [SIFIVE_U_DEV_OTP] =      { 0x10070000,     0x1000 },
-    [SIFIVE_U_DEV_GEM] =      { 0x10090000,     0x2000 },
-    [SIFIVE_U_DEV_GEM_MGMT] = { 0x100a0000,     0x1000 },
-    [SIFIVE_U_DEV_DMC] =      { 0x100b0000,    0x10000 },
-    [SIFIVE_U_DEV_FLASH0] =   { 0x20000000, 0x10000000 },
-    [SIFIVE_U_DEV_DRAM] =     { 0x80000000,        0x0 },
-};
-*/
-
-.set UART_BASE, 0x10010000
+.set UART_BASE, 0x10000000
 
 .section .text
 .global uart_init
@@ -42,11 +17,13 @@ uart_init:
     # So we set up the interrupt register for it
     li t0, UART_BASE
 
-    # R - interrupt on Received
-    # T - interrupt on Transmit
-    #              RT
+    # M - Modem status interrupt
+    # R - Receiver line status interrupt
+    # T - Transmitter holding register empty interrupt
+    # D - received Data available interrupt
+    #            MRTD
     li t1, 0b00000000
-    sw t1, 0x10(t0)
+    sw t1, 0x04(t0)
 
     ret
 
@@ -78,7 +55,7 @@ puts_end:
 
 
 # loader_uart_getc(void) -> char
-# Gets a character from the UART port.
+# Gets a character from the UART port and echos it back.
 #
 # Parameters: nothing
 # Returns:
@@ -87,10 +64,11 @@ loader_uart_getc:
     li t0, UART_BASE
 
 getc_loop:
-    lw a0, 0x04(t0)
+    lbu a0, 0x05(t0)
+    andi a0, a0, 0b00000001
     beqz a0, getc_loop
 
+    lw a0, 0x00(t0)
     sw a0, 0x00(t0)
-    sw zero, 0x04(t0)
     ret
 

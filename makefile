@@ -2,15 +2,13 @@ CODE=src/
 CC=riscv64-unknown-elf-gcc
 CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld
 EMU=qemu-system-riscv64
-EFLAGS=--machine sifive_u --bios none --nographic -m 6g
+EFLAGS=-machine virt -bios none -nographic -m 6g
 
 all: boot iso
-	$(EMU) $(EFLAGS) --kernel build/boot --drive format=raw,file=build/sd.iso
+	chmod 777 -R build/ obj/
 
 run:
-	$(EMU) $(EFLAGS) --kernel build/boot
-
-build: boot iso
+	$(EMU) $(EFLAGS) -kernel build/boot # -drive file=build/sd.iso,format=raw
 
 boot: $(CODE)boot/*.s
 	mkdir -p obj/boot/
@@ -27,7 +25,7 @@ iso: kernel
 	cp -r build/root/* mnt/
 	umount mnt
 
-kernel: src/root/kernel.c
+kernel: $(CODE)root/kernel.c
 	mkdir -p build/root
 	$(CC) $(CFLAGS) $? -o kernel
 	mv kernel build/root
