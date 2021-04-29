@@ -1,6 +1,5 @@
 .section .text
 .global ext2fs_load_kernel
-.global pci_init
 
 
 /*
@@ -121,16 +120,10 @@ static const MemMapEntry virt_memmap[] = {
         class Host bridge, addr 00:00.0, pci id 1b36:0008 (sub 1af4:1100)
 */
 
-.set HARD_DRIVE_BASE, 0x10001000
-
-
-# pci_init(void) -> void
-# Initialises the PCI.
-#
-# Parameters: nothing
-# Returns: nothing
-pci_init:
-    ret
+.set VIRTIO_MMIO_BASE, 0x10001000
+.set VIRTIO_MMIO_INTERVAL, 0x1000
+.set VIRTIO_MMIO_TOP, 0x010009000
+.set VIRTIO_MAGIC, 0x74726976
 
 
 # ext2fs_load_kernel(void) -> void
@@ -148,10 +141,16 @@ ext2fs_load_kernel:
     jal loader_uart_puts
 
     # Init virtio device
-    jal init_virtio_hd_device
-    beqz a0, ext2fs_return
+    jal find_virtio_block_device
+    bnez a0, ext2fs_seek_magic
+
+    # Failure message for not finding a block device
+    la a0, block_device_not_found_msg
+    jal loader_uart_puts
+    j ext2fs_return
 
     # Seek to magic number
+ext2fs_seek_magic:
     li a0, 0x0438
     jal ext2fs_hd_seek
 
@@ -172,30 +171,47 @@ ext2fs_return:
     ret
 
 
-# init_virtio_hd_device(void) -> bool
-# Initialises the virtio hard drive device.
+# find_virtio_block_device(void) -> bool
+# Finds a virtio block device to boot from.
 #
 # Parameters: nothing
 # Returns:
-# a0: bool      - True if successful, false if an error occured in initialisation
-init_virtio_hd_device:
+# a0: void*     - Pointer to the block device, or NULL if not found.
+find_virtio_block_device:
+    # Push the return address
     addi sp, sp, -0x8
     sd ra, 0x0(sp)
 
-    li t0, HARD_DRIVE_BASE
+    # Init iterator
+    li t0, VIRTIO_MMIO_BASE
+    li t3, VIRTIO_MMIO_TOP
+
+find_virtio_block_device_loop:
+    # Check for magic number
     lw t1, 0x00(t0)
-    li t2, 0x74726976
-    beq t1, t2, init_virtio_hd_device_magic_confirmed
+    li t2, VIRTIO_MAGIC
+    bne t1, t2, find_virtio_block_device_loop_end
 
-    la a0, virtio_hd_device_bad_magic
-    jal loader_uart_puts
+    # Check for device id
+    lbu t1, 0x08(t0)
+    li t2, 0x02
+    bne t1, t2, find_virtio_block_device_loop_end
+
+    # Device is valid, return address
+    mv a0, t0
+    j find_virtio_block_device_return
+
+    # Increment iterator and branch
+find_virtio_block_device_loop_end:
+    li t1, VIRTIO_MMIO_INTERVAL
+    add t0, t0, t1
+    blt t0, t3, find_virtio_block_device_loop
+
+    # Failed to find device, set return value to zero
     mv a0, zero
-    j init_virtio_hd_device_return
 
-init_virtio_hd_device_magic_confirmed:
-    li a0, 1
-
-init_virtio_hd_device_return:
+    # Return
+find_virtio_block_device_return:
     ld ra, 0x0(sp)
     addi sp, sp, 0x8
     ret
@@ -224,6 +240,6 @@ ext2_magic_verified:
     .string "ext2 file system verified.\n"
     .byte 0
 
-virtio_hd_device_bad_magic:
-    .string "Magic number check for virtio hard drive device failed.\n"
+block_device_not_found_msg:
+    .string "Block device not found.\n"
     .byte 0

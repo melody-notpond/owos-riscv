@@ -17,13 +17,6 @@ _start:
     la a0, uart_init_msg
     jal loader_uart_puts
 
-    # Initialise PCI
-    jal pci_init
-
-    # Tell the user that PCI is initialised
-    la a0, pci_init_msg
-    jal loader_uart_puts
-
     # Boot into the hard drive
     jal ext2fs_load_kernel
 
@@ -38,10 +31,6 @@ finish:
 .section .rodata
 uart_init_msg:
     .string "Initialised UART\n"
-    .byte 0
-
-pci_init_msg:
-    .string "Initialised PCI\n"
     .byte 0
 
 loading_kernel_fail_msg:
