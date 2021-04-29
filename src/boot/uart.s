@@ -23,7 +23,7 @@ uart_init:
     # D - received Data available interrupt
     #            MRTD
     li t1, 0b00000000
-    sw t1, 0x04(t0)
+    sw t1, 0x01(t0)
 
     ret
 
