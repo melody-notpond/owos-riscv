@@ -9,6 +9,7 @@ _start:
 
     # Initialise stack pointer
     li sp, 0xc0000000
+    mv fp, sp
 
     # Initialise UART
     jal uart_init

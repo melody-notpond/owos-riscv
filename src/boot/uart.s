@@ -49,7 +49,7 @@ uart_init:
 # - t4
 loader_uart_put_hex:
     # Push the return address
-    addi sp, sp, -0x8
+    addi sp, sp, -0x10
     sd ra, 0x0(sp)
 
     # Print out zero if it's zero
@@ -91,7 +91,7 @@ loader_uart_put_hex_putc_loop:
 
 loader_uart_put_hex_return:
     ld ra, 0x0(sp)
-    addi sp, sp, 0x8
+    addi sp, sp, 0x10
     ret
 
 
@@ -133,7 +133,7 @@ putc_wait:
 # - t1
 loader_uart_puts:
     # Push the return address
-    addi sp, sp, -0x8
+    addi sp, sp, -0x10
     sd ra, 0x0(sp)
 
     # Load the UART base address
@@ -154,7 +154,7 @@ puts_loop:
     # Return
 puts_end:
     ld ra, 0x0(sp)
-    addi sp, sp, 0x8
+    addi sp, sp, 0x10
     ret
 
 

@@ -177,29 +177,76 @@ ext2fs_return:
 # Parameters: nothing
 # Returns:
 # a0: void*     - Pointer to the block device, or NULL if not found.
+# Used registers:
+# - a0
+# - a1
+# - t0
+# - t1
+# - t2
+# - t3
+# - t4
 find_virtio_block_device:
-    # Push the return address
-    addi sp, sp, -0x8
-    sd ra, 0x0(sp)
+    # Push the return address and frame pointer
+    sd fp, -0x8(sp)
+    mv fp, sp
+    addi sp, sp, -0x28
+    sd ra, 0x10(fp)
 
     # Init iterator
     li t0, VIRTIO_MMIO_BASE
     li t3, VIRTIO_MMIO_TOP
 
+    # Print out address
 find_virtio_block_device_loop:
+    sd t0, 0x18(fp)
+    sd t3, 0x20(fp)
+    la a0, probing_virtio_device_msg
+    jal loader_uart_puts
+    ld a0, 0x18(fp)
+    jal loader_uart_put_hex
+    li a1, '\n'
+    jal loader_uart_putc
+    ld t3, 0x20(fp)
+    ld t0, 0x18(fp)
+
     # Check for magic number
     lw t1, 0x00(t0)
     li t2, VIRTIO_MAGIC
     bne t1, t2, find_virtio_block_device_loop_end
 
-    # Check for device id
-    lbu t1, 0x08(t0)
-    li t2, 0x02
-    bne t1, t2, find_virtio_block_device_loop_end
+    # Print that magic number was confirmed
+    sd t0, 0x18(fp)
+    sd t3, 0x20(fp)
+    la a0, probing_virtio_device_magic_msg
+    jal loader_uart_puts
+    ld t3, 0x20(fp)
+    ld t0, 0x18(fp)
 
-    # Device is valid, return address
-    mv a0, t0
+    # Check for device id
+    lw t1, 0x08(t0)
+    li t2, 0x02
+    bne t1, t2, find_virtio_block_device_not_block_device
+
+    # Device is valid, print message and return address
+    sd t0, 0x18(fp)
+    la a0, probing_virtio_block_device_found
+    jal loader_uart_puts
+    ld a0, 0x18(fp)
     j find_virtio_block_device_return
+
+    # Display received and expected device number
+find_virtio_block_device_not_block_device:
+    sd t0, 0x18(fp)
+    sd t3, 0x20(fp)
+    sd t1, 0x28(fp)
+    la a0, probing_virtio_device_received_msg
+    jal loader_uart_puts
+    ld a0, 0x28(fp)
+    jal loader_uart_put_hex
+    li a1, '\n'
+    jal loader_uart_putc
+    ld t3, 0x20(fp)
+    ld t0, 0x18(fp)
 
     # Increment iterator and branch
 find_virtio_block_device_loop_end:
@@ -212,8 +259,9 @@ find_virtio_block_device_loop_end:
 
     # Return
 find_virtio_block_device_return:
-    ld ra, 0x0(sp)
-    addi sp, sp, 0x8
+    ld ra, 0x10(fp)
+    mv sp, fp
+    ld fp, 0x08(fp)
     ret
 
 
@@ -242,4 +290,20 @@ ext2_magic_verified:
 
 block_device_not_found_msg:
     .string "Block device not found.\n"
+    .byte 0
+
+probing_virtio_device_msg:
+    .string "Probing virtio device 0x"
+    .byte 0
+
+probing_virtio_device_magic_msg:
+    .string "Virtio device confirmed.\n"
+    .byte 0
+
+probing_virtio_device_received_msg:
+    .string "Virtio device type: expected 0x2, received 0x"
+    .byte 0
+
+probing_virtio_block_device_found:
+    .string "Virtio block device found!\n"
     .byte 0
