@@ -142,7 +142,7 @@ ext2fs_load_kernel:
 
     # Tell user that hard drive is being loaded and booted into
     la a0, accessing_msg
-    jal loader_uart_puts
+    jal uart_puts
 
     # Find virtio device
     jal find_virtio_block_device
@@ -150,7 +150,7 @@ ext2fs_load_kernel:
 
     # Failure message for not finding a block device
     la a0, block_device_not_found_msg
-    jal loader_uart_puts
+    jal uart_puts
     j ext2fs_return
 
     # Initialise the hard drive
@@ -184,7 +184,7 @@ ext2fs_init_hd:
 
     # Display error message and return
     la a0, init_hd_features_unsupported_msg
-    jal loader_uart_puts
+    jal uart_puts
     j ext2fs_return
 
     # 7. Perform device-specific setup, including discovery of virtqueues for the device, optional per-bus setup, reading and possibly writing the device’s virtio configuration space, and population of virtqueues.
@@ -199,7 +199,7 @@ ext2fs_init_hd_specific:
     # Say initialisation was successful
     sd a0, 0x00(sp)
     la a0, init_hd_success_msg
-    jal loader_uart_puts
+    jal uart_puts
     ld a0, 0x00(sp)
 
     # Seek to magic number
@@ -215,7 +215,7 @@ ext2fs_seek_magic:
 
     # Print message saying the file system magic number was verified
     la a0, ext2_magic_verified
-    jal loader_uart_puts
+    jal uart_puts
 
     # Return
 ext2fs_return:
@@ -254,11 +254,11 @@ find_virtio_block_device_loop:
     sd t0, 0x18(fp)
     sd t3, 0x20(fp)
     la a0, probing_virtio_device_msg
-    jal loader_uart_puts
+    jal uart_puts
     ld a0, 0x18(fp)
-    jal loader_uart_put_hex
+    jal uart_put_hex
     li a1, '\n'
-    jal loader_uart_putc
+    jal uart_putc
     ld t3, 0x20(fp)
     ld t0, 0x18(fp)
 
@@ -271,7 +271,7 @@ find_virtio_block_device_loop:
     sd t0, 0x18(fp)
     sd t3, 0x20(fp)
     la a0, probing_virtio_device_magic_msg
-    jal loader_uart_puts
+    jal uart_puts
     ld t3, 0x20(fp)
     ld t0, 0x18(fp)
 
@@ -283,7 +283,7 @@ find_virtio_block_device_loop:
     # Device is valid, print message and return address
     sd t0, 0x18(fp)
     la a0, probing_virtio_block_device_found
-    jal loader_uart_puts
+    jal uart_puts
     ld a0, 0x18(fp)
     j find_virtio_block_device_return
 
@@ -293,11 +293,11 @@ find_virtio_block_device_not_block_device:
     sd t3, 0x20(fp)
     sd t1, 0x28(fp)
     la a0, probing_virtio_device_received_msg
-    jal loader_uart_puts
+    jal uart_puts
     ld a0, 0x28(fp)
-    jal loader_uart_put_hex
+    jal uart_put_hex
     li a1, '\n'
-    jal loader_uart_putc
+    jal uart_putc
     ld t3, 0x20(fp)
     ld t0, 0x18(fp)
 
@@ -329,7 +329,6 @@ find_virtio_block_device_return:
 # - a0
 # - a1
 ext2fs_hd_seek:
-    
     ret
 
 

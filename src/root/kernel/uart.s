@@ -1,11 +1,29 @@
+/*
+static const MemMapEntry virt_memmap[] = {
+    [VIRT_DEBUG] =       {        0x0,         0x100 },
+    [VIRT_MROM] =        {     0x1000,        0xf000 },
+    [VIRT_TEST] =        {   0x100000,        0x1000 },
+    [VIRT_RTC] =         {   0x101000,        0x1000 },
+    [VIRT_CLINT] =       {  0x2000000,       0x10000 },
+    [VIRT_PCIE_PIO] =    {  0x3000000,       0x10000 },
+    [VIRT_PLIC] =        {  0xc000000, VIRT_PLIC_SIZE(VIRT_CPUS_MAX * 2) },
+    [VIRT_UART0] =       { 0x10000000,         0x100 },
+    [VIRT_VIRTIO] =      { 0x10001000,        0x1000 },
+    [VIRT_FW_CFG] =      { 0x10100000,          0x18 },
+    [VIRT_FLASH] =       { 0x20000000,     0x4000000 },
+    [VIRT_PCIE_ECAM] =   { 0x30000000,    0x10000000 },
+    [VIRT_PCIE_MMIO] =   { 0x40000000,    0x40000000 },
+    [VIRT_DRAM] =        { 0x80000000,           0x0 },
+};
+*/
 .set UART_BASE, 0x10000000
 
 .section .text
 .global uart_init
-.global loader_uart_put_hex
-.global loader_uart_putc
-.global loader_uart_puts
-.global loader_uart_getc
+.global uart_put_hex
+.global uart_putc
+.global uart_puts
+.global uart_getc
 
 
 # uart_init(void) -> void
@@ -33,7 +51,7 @@ uart_init:
     ret
 
 
-# loader_uart_put_hex(long long) -> void
+# uart_put_hex(long long) -> void
 # Puts a long long as a hex number into the UART port.
 #
 # Parameters:
@@ -47,27 +65,27 @@ uart_init:
 # - t2
 # - t3
 # - t4
-loader_uart_put_hex:
+uart_put_hex:
     # Push the return address
     addi sp, sp, -0x10
     sd ra, 0x0(sp)
 
     # Print out zero if it's zero
-    bnez a0, loader_uart_put_hex_nonzero
+    bnez a0, uart_put_hex_nonzero
     li a1, '0'
-    jal loader_uart_putc
-    j loader_uart_put_hex_return
+    jal putc_wait
+    j uart_put_hex_return
 
-loader_uart_put_hex_nonzero:
+uart_put_hex_nonzero:
     # Initialise t0 and t1
     mv t0, a0
     li t1, -4
 
     # Get log_16(a0)
-loader_uart_put_hex_log_loop:
+uart_put_hex_log_loop:
     srli t0, t0, 4
     addi t1, t1, 4
-    bnez t0, loader_uart_put_hex_log_loop
+    bnez t0, uart_put_hex_log_loop
 
     # Initialise t0, t2, and t3
     li t0, UART_BASE
@@ -75,11 +93,11 @@ loader_uart_put_hex_log_loop:
     sll t2, t2, t1
     mv t3, t1
 
-loader_uart_put_hex_putc_loop:
+uart_put_hex_putc_loop:
     # Get character and print
     and a1, a0, t2
     srl a1, a1, t3
-    la t4, loader_uart_put_hex_array
+    la t4, uart_put_hex_array
     add a1, a1, t4
     lbu a1, 0x0(a1)
     jal putc_wait
@@ -87,15 +105,15 @@ loader_uart_put_hex_putc_loop:
     # Decrement and shift and branch
     addi t3, t3, -4
     srli t2, t2, 4
-    bnez t2, loader_uart_put_hex_putc_loop
+    bnez t2, uart_put_hex_putc_loop
 
-loader_uart_put_hex_return:
+uart_put_hex_return:
     ld ra, 0x0(sp)
     addi sp, sp, 0x10
     ret
 
 
-# loader_uart_putc(char) -> void
+# uart_putc(char) -> void
 # Puts a character onto the UART port.
 #
 # Parameters:
@@ -105,7 +123,7 @@ loader_uart_put_hex_return:
 # - a1
 # - t0
 # - t1
-loader_uart_putc:
+uart_putc:
     # Load UART base
     li t0, UART_BASE
 
@@ -120,7 +138,7 @@ putc_wait:
     ret
 
 
-# loader_uart_puts(char*) -> void
+# uart_puts(char*) -> void
 # Puts a string onto the UART port.
 #
 # Parameters:
@@ -131,7 +149,7 @@ putc_wait:
 # - a1
 # - t0
 # - t1
-loader_uart_puts:
+uart_puts:
     # Push the return address
     addi sp, sp, -0x10
     sd ra, 0x0(sp)
@@ -158,7 +176,7 @@ puts_end:
     ret
 
 
-# loader_uart_getc(void) -> char
+# uart_getc(void) -> char
 # Gets a character from the UART port and echos it back.
 #
 # Parameters: nothing
@@ -168,7 +186,7 @@ puts_end:
 # - a0
 # - t0
 # - t1
-loader_uart_getc:
+uart_getc:
     li t0, UART_BASE
 
     # Wait until UART has a new character
@@ -190,7 +208,7 @@ getc_echo_wait:
     ret
 
 .section .rodata
-loader_uart_put_hex_array:
+uart_put_hex_array:
     .string "0123456789ABCDEF"
     .byte 0
 

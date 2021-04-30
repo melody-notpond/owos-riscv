@@ -16,15 +16,10 @@ _start:
 
     # Tell user that UART is initialised
     la a0, uart_init_msg
-    jal loader_uart_puts
+    jal uart_puts
 
-    # Boot into the hard drive
-    jal ext2fs_load_kernel
-
-    # If we are here, we failed to boot into the kernel
-    la a0, loading_kernel_fail_msg
-    jal loader_uart_puts
-
+    # Jump to kernel
+    jal kinit
 finish:
     j finish
 
@@ -32,9 +27,5 @@ finish:
 .section .rodata
 uart_init_msg:
     .string "Initialised UART\n"
-    .byte 0
-
-loading_kernel_fail_msg:
-    .string "Error loading kernel\nHalting.\n"
     .byte 0
 

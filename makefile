@@ -1,21 +1,14 @@
-CODE=src/
+CODE=src/root/
 CC=riscv64-unknown-elf-gcc
 CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld
 EMU=qemu-system-riscv64
-EFLAGS=-machine virt -nographic -m 6g -device virtio-blk-device,scsi=off,drive=foo
+EFLAGS=-machine virt -nographic -m 6g -device virtio-blk-device,scsi=off,drive=foo -bios none
 
-all: boot iso
+all: iso
 	chmod 777 -R build/ obj/
 
 run:
-	$(EMU) $(EFLAGS) -bios build/boot -drive if=none,format=raw,file=build/drive.iso,id=foo
-
-boot: $(CODE)boot/*.s
-	mkdir -p obj/boot/
-	mkdir -p build
-	$(CC) $(CFLAGS) -c $?
-	mv *.o obj/boot/
-	$(CC) $(CFLAGS) obj/boot/*.o -o build/boot
+	$(EMU) $(EFLAGS) -kernel build/root/kernel -drive if=none,format=raw,file=build/drive.iso,id=foo
 
 iso: kernel
 	ls build/drive.iso || dd if=/dev/zero of=build/drive.iso bs=1M count=2048
@@ -25,8 +18,9 @@ iso: kernel
 	cp -r build/root/* mnt/
 	umount mnt
 
-kernel: $(CODE)root/kernel/*.c
+kernel: $(CODE)kernel/boot.s $(CODE)kernel/*.s $(CODE)kernel/*.c
 	mkdir -p build/root
+	mkdir -p obj/
 	$(CC) $(CFLAGS) $? -o kernel
 	mv kernel build/root
 
