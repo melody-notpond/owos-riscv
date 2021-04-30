@@ -2,13 +2,13 @@ CODE=src/
 CC=riscv64-unknown-elf-gcc
 CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld
 EMU=qemu-system-riscv64
-EFLAGS=-machine virt -bios none -nographic -m 6g -device virtio-blk-device,scsi=off,drive=foo
+EFLAGS=-machine virt -nographic -m 6g -device virtio-blk-device,scsi=off,drive=foo
 
 all: boot iso
 	chmod 777 -R build/ obj/
 
 run:
-	$(EMU) $(EFLAGS) -kernel build/boot -drive if=none,format=raw,file=build/drive.iso,id=foo
+	$(EMU) $(EFLAGS) -bios build/boot -drive if=none,format=raw,file=build/drive.iso,id=foo
 
 boot: $(CODE)boot/*.s
 	mkdir -p obj/boot/
@@ -18,7 +18,7 @@ boot: $(CODE)boot/*.s
 	$(CC) $(CFLAGS) obj/boot/*.o -o build/boot
 
 iso: kernel
-	dd if=/dev/zero of=build/drive.iso bs=1M count=2048
+	ls build/drive.iso || dd if=/dev/zero of=build/drive.iso bs=1M count=2048
 	mkfs.ext2 -F build/drive.iso
 	mkdir -p mnt
 	mount build/drive.iso mnt

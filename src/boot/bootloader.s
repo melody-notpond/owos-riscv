@@ -8,7 +8,7 @@ _start:
     bnez t0, finish
 
     # Initialise stack pointer
-    li sp, 0xc0000000
+    la sp, stack_top
     mv fp, sp
 
     # Initialise UART
@@ -35,6 +35,6 @@ uart_init_msg:
     .byte 0
 
 loading_kernel_fail_msg:
-    .string "Error loading kernel: unknown error\nHalting.\n"
+    .string "Error loading kernel\nHalting.\n"
     .byte 0
 

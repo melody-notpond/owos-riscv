@@ -131,27 +131,80 @@ static const MemMapEntry virt_memmap[] = {
 #
 # Parameters: nothing
 # Returns: nothing
+# Used registers:
+# - a0
+# - t0
+# - t1
 ext2fs_load_kernel:
     # Push the return address
-    addi sp, sp, -0x8
-    sd ra, 0x0(sp)
+    addi sp, sp, -0x10
+    sd ra, 0x8(sp)
 
     # Tell user that hard drive is being loaded and booted into
     la a0, accessing_msg
     jal loader_uart_puts
 
-    # Init virtio device
+    # Find virtio device
     jal find_virtio_block_device
-    bnez a0, ext2fs_seek_magic
+    bnez a0, ext2fs_init_hd
 
     # Failure message for not finding a block device
     la a0, block_device_not_found_msg
     jal loader_uart_puts
     j ext2fs_return
 
+    # Initialise the hard drive
+ext2fs_init_hd:
+    # Steps to initialise the device (taken from virtio specs):
+    # 1. Reset the device status register.
+    sw zero, 0x070(a0)
+
+    # 2. Set the ACKNOWLEDGE status bit: the guest OS has noticed the device.
+    ori t0, t0, 1
+    sw t0, 0x070(a0)
+
+    # 3. Set the DRIVER status bit: the guest OS knows how to drive the device.
+    ori t0, t0, 2
+    sw t0, 0x070(a0)
+
+    # 4. Read device feature bits, and write the subset of feature bits understood by the OS and driver to the device. During this step the driver MAY read (but MUST NOT write) the device-specific configuration fields to check that it can support the device before accepting it.
+    lw t0, 0x010(a0)
+    ori t0, t0, 0b00100000
+    sw t0, 0x020(a0)
+
+    # 5. Set the FEATURES_OK status bit. The driver MUST NOT accept new feature bits after this step.
+    lw t0, 0x070(a0)
+    ori t0, t0, 8
+    sw t0, 0x070(a0)
+
+    # 6. Re-read device status to ensure the FEATURES_OK bit is still set: otherwise, the device does not support our subset of features and the device is unusable.
+    lw t0, 0x070(a0)
+    andi t0, t0, 8
+    bnez t0, ext2fs_init_hd_specific
+
+    # Display error message and return
+    la a0, init_hd_features_unsupported_msg
+    jal loader_uart_puts
+    j ext2fs_return
+
+    # 7. Perform device-specific setup, including discovery of virtqueues for the device, optional per-bus setup, reading and possibly writing the device’s virtio configuration space, and population of virtqueues.
+ext2fs_init_hd_specific:
+    # TODO
+
+    # 8. Set the DRIVER_OK status bit. At this point the device is “live”.
+    lw t0, 0x070(a0)
+    ori t0, t0, 4
+    sw t0, 0x070(a0)
+
+    # Say initialisation was successful
+    sd a0, 0x00(sp)
+    la a0, init_hd_success_msg
+    jal loader_uart_puts
+    ld a0, 0x00(sp)
+
     # Seek to magic number
 ext2fs_seek_magic:
-    li a0, 0x0438
+    li a1, 0x0438
     jal ext2fs_hd_seek
 
     # Read magic number
@@ -166,8 +219,8 @@ ext2fs_seek_magic:
 
     # Return
 ext2fs_return:
-    ld ra, 0x0(sp)
-    addi sp, sp, 0x8
+    ld ra, 0x8(sp)
+    addi sp, sp, 0x10
     ret
 
 
@@ -265,13 +318,18 @@ find_virtio_block_device_return:
     ret
 
 
-# ext2fs_hd_seek(long long) -> void
+# ext2fs_hd_seek(void*, long long) -> void
 # Seeks to a memory address in the hard drive.
 #
 # Parameters:
-# a0: long long - The address to seek to.
+# a0: void*     - The address of the hard drive.
+# a1: long long - The address to seek to.
 # Returns: nothing
+# Used registers:
+# - a0
+# - a1
 ext2fs_hd_seek:
+    
     ret
 
 
@@ -306,4 +364,12 @@ probing_virtio_device_received_msg:
 
 probing_virtio_block_device_found:
     .string "Virtio block device found!\n"
+    .byte 0
+
+init_hd_features_unsupported_msg:
+    .string "Virtio block device does not support the selected features.\n"
+    .byte 0
+
+init_hd_success_msg:
+    .string "Virtio block device initialised successfully.\n"
     .byte 0
