@@ -18,7 +18,7 @@ iso: kernel
 	cp -r build/root/* mnt/
 	umount mnt
 
-kernel: $(CODE)kernel/boot.s $(CODE)kernel/*.s $(CODE)kernel/*.c
+kernel: $(CODE)kernel/boot.s $(CODE)kernel/*.s $(CODE)kernel/*.c $(CODE)kernel/virtio/*.c
 	mkdir -p build/root
 	mkdir -p obj/
 	$(CC) $(CFLAGS) $? -o kernel
