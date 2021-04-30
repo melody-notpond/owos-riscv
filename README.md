@@ -1,2 +1,2 @@
 # owos-riscv
-Simple operating system for a SiFive U board.
+Simple operating system for QEMU's virt board.
