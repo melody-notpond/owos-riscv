@@ -1,5 +1,5 @@
-#include "virtio.h"
 #include "uart.h"
+#include "virtio.h"
 
 #define VIRTIO_MMIO_BASE 0x10001000
 #define VIRTIO_MMIO_INTERVAL 0x1000
@@ -19,9 +19,9 @@
         *(status) |= VIRTIO_DEVICE_STATUS_DRIVER;                                                        \
                                                                                                          \
         /* 4. Read device specific features */                                                           \
-        unsigned int features = *((unsigned int*) addr + 0x10);                                          \
+        unsigned int features = *((unsigned int*) addr + 0x010);                                         \
         { device_features }                                                                              \
-        *((unsigned int*) addr + 0x20) = features;                                                       \
+        *((unsigned int*) addr + 0x020) = features;                                                      \
                                                                                                          \
         /* 5. Set features ok bit (can no longer set features) */                                        \
         *(status) |= VIRTIO_DEVICE_STATUS_FEATURES_OK;                                                   \
@@ -45,34 +45,6 @@ enum {
     VIRTIO_DEVICE_STATUS_FEATURES_OK = 8,
     VIRTIO_DEVICE_STATUS_DRIVER_OK = 4,
 };
-
-void virtio_probe() {
-    volatile void* base = (void*) VIRTIO_MMIO_BASE;
-
-    for (; base <= VIRTIO_MMIO_TOP; base += VIRTIO_MMIO_INTERVAL) {
-        uart_puts("Probing 0x");
-        uart_put_hex(base);
-        uart_puts(" for virtio devices\n");
-
-        if (*((unsigned int*) base) != VIRTIO_MAGIC) {
-            uart_puts("Device is not a virtio device. Resuming probing.\n");
-            continue;
-        }
-
-        switch (*(((unsigned int*) base) + 2)) {
-            case 0x00:
-                uart_puts("Device is unallocated. Resuming probing.\n");
-                break;
-            case 0x02:
-                uart_puts("Device is a block device. Initialising...\n");
-                virtio_init_block_device(base);
-                break;
-            default:
-                uart_puts("Unknown device. Resuming probing.\n");
-                break;
-        }
-    }
-}
 
 /*
 static const MemMapEntry virt_memmap[] = {
@@ -191,10 +163,38 @@ static const MemMapEntry virt_memmap[] = {
         failover_pair_id = ""
         class Host bridge, addr 00:00.0, pci id 1b36:0008 (sub 1af4:1100)
 */
-void virtio_init_block_device(void* addr) {
+void virtio_init_block_device(volatile void* addr) {
     VIRTIO_GENERIC_INIT(status,
         features &= 0xffffffdf;
     ,
         
     );
+}
+
+void virtio_probe() {
+    volatile void* base = (void*) VIRTIO_MMIO_BASE;
+
+    for (; (long long) base <= VIRTIO_MMIO_TOP; base += VIRTIO_MMIO_INTERVAL) {
+        uart_puts("Probing 0x");
+        uart_put_hex((long long) base);
+        uart_puts(" for virtio devices\n");
+
+        if (*((unsigned int*) base) != VIRTIO_MAGIC) {
+            uart_puts("Device is not a virtio device. Resuming probing.\n");
+            continue;
+        }
+
+        switch (*(((unsigned int*) base) + 2)) {
+            case 0x00:
+                uart_puts("Device is unallocated. Resuming probing.\n");
+                break;
+            case 0x02:
+                uart_puts("Device is a block device. Initialising...\n");
+                virtio_init_block_device(base);
+                break;
+            default:
+                uart_puts("Unknown device. Resuming probing.\n");
+                break;
+        }
+    }
 }
