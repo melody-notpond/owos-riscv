@@ -22,9 +22,9 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
         // Set queue size
         mmio->queue_num = VIRTIO_RING_SIZE;
 
-        // Create block device
+        // Create block device queue
         unsigned long long page_count = (sizeof(virtio_queue_t) + PAGE_SIZE - 1) / PAGE_SIZE;
-        uart_puts("Block device has 0x");
+        uart_puts("Queue for block device has 0x");
         uart_put_hex(page_count);
         uart_puts(" pages.\n");
 
@@ -32,19 +32,24 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
         mmio->queue_sel = 0;
 
         // Allocate queue
-        volatile virtio_queue_t* queue = (volatile virtio_queue_t*) alloc(page_count);
+        volatile virtio_queue_t* queue = alloc(page_count);
 
-        // Set page size
-        mmio->guest_page_size = PAGE_SIZE;
+        // Notify device of queue
+        mmio->queue_desc = (volatile virtio_descriptor_t**) &queue->desc;
+        mmio->queue_avail = &queue->available;
+        mmio->queue_used = &queue->used;
 
-        // Set queuepfn
-        mmio->queue_pfn = ((unsigned long long) queue) / PAGE_SIZE;
+        // Get config
+        volatile virtio_block_config_t* config = (volatile virtio_block_config_t*) (&mmio->config);
+        uart_puts("Block device has 0x");
+        uart_put_hex(config->capacity);
+        uart_puts(" sectors.\n");
 
         // Add block device
         long long i = (((long long) mmio) - VIRTIO_MMIO_BASE) >> 12;
         block_devices[i].queue = queue;
         block_devices[i].mmio = mmio;
-        block_devices[i].config = (volatile virtio_block_config_t*) (((void*) mmio) + 0x100);
+        block_devices[i].config = config;
         block_devices[i].idx = 0;
         block_devices[i].ack_used_idx = 0;
         block_devices[i].in_use = 1;

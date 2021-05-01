@@ -20,8 +20,8 @@ void virtio_probe() {
             continue;
         }
 
-        if (mmio->version == 0x2) {
-            uart_puts("Nonlegacy version of virtio is unsupported. Resuming probing.\n");
+        if (mmio->version != 0x2) {
+            uart_puts("Legacy version of virtio is unsupported. Resuming probing.\n");
             continue;
         }
 
