@@ -1,8 +1,8 @@
 CODE=src/root/
 CC=riscv64-unknown-elf-gcc
-CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld
+CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld -g
 EMU=qemu-system-riscv64
-EFLAGS=-machine virt -nographic -m 6g -device virtio-blk-device,scsi=off,drive=foo -bios none -global virtio-mmio.force-legacy=false
+EFLAGS=-machine virt -nographic -m 256m -device virtio-blk-device,scsi=off,drive=foo -bios none -global virtio-mmio.force-legacy=false
 
 all: iso
 	chmod 777 -R build/ obj/

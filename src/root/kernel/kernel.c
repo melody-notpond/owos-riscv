@@ -1,8 +1,15 @@
 #include "uart.h"
+#include "virtio/block.h"
 #include "virtio/virtio.h"
 
 void kmain() {
-    while (1);
+    uart_puts("Writing test data to block.\n");
+    virtio_block_write(7, 0, "hewwo", 6);
+    uart_puts("Wrote to block device.\n");
+
+    while (1) {
+        uart_getc();
+    }
 }
 
 void kinit() {

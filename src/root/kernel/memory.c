@@ -25,7 +25,6 @@ void init_heap_metadata() {
     for (; ptr < (unsigned long long*) heap_start; ptr++) {
         *ptr = 0;
     }
-
 }
 
 char is_free(page_t* ptr) {
