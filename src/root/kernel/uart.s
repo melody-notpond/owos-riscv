@@ -35,18 +35,38 @@ static const MemMapEntry virt_memmap[] = {
 # - t0
 # - t1
 uart_init:
-    # QEMU automatically sets up the registers for us
-    # Except possibly the interrupt register (idk if that is set up to no interrupts)
-    # So we set up the interrupt register for it
     li t0, UART_BASE
 
-    # M - Modem status interrupt
-    # R - Receiver line status interrupt
-    # T - Transmitter holding register empty interrupt
-    # D - received Data available interrupt
+    # Allow writing to the divisor latch registers
+    li t1, 0b10000000
+    sb t1, 0x03(t0)
+
+    # Write baudrate divisor constant
+    li t1, 0x6f
+    sb t1, 0x00(t0)
+    li t1, 0x00
+    sb t1, 0x01(t0)
+
+    # Set line control register
+    # D  - Divisor latch access (disabled)
+    # B  - force Break          (disabled)
+    # F  - Force parity         (disabled)
+    # E  - Even parity          (disabled)
+    # P  - enable Parity        (enabled)
+    # S  - Stop bits            (2 bits)
+    # WW - Word size            (8 bits)
+    #        DBFEPSWW
+    li t1, 0b00001111
+    sb t1, 0x03(t0)
+
+    # Have no interrupts for now
+    # M - Modem status interrupt                        (disabled)
+    # R - Receiver line status interrupt                (disabled)
+    # T - Transmitter holding register empty interrupt  (disabled)
+    # D - received Data available interrupt             (disabled)
     #            MRTD
     li t1, 0b00000000
-    sw t1, 0x01(t0)
+    sb t1, 0x01(t0)
 
     ret
 

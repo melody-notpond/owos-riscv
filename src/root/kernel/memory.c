@@ -7,9 +7,6 @@ typedef unsigned char page_t[PAGE_SIZE];
 // Heap bottom
 extern page_t heap_bottom;
 
-// Program break
-page_t* prog_brk;
-
 enum {
     PAGE_ALLOC_BYTE_FREE = 0,
     PAGE_ALLOC_BYTE_USED = 1,
