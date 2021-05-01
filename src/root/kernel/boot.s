@@ -18,6 +18,16 @@ _start:
     la a0, uart_init_msg
     jal uart_puts
 
+    # Set machine trap vector
+    la t0, interrupt_handler
+    csrw mtvec, t0
+
+    # Enable interrupts
+    li t0, 0b100000001000
+    csrs mie, t0
+    li t0, 0b00001000
+    csrs mstatus, t0
+
     # Jump to kernel
     jal kinit
 finish:

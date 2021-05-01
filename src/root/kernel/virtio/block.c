@@ -42,6 +42,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     queue->num = 0;
     queue->desc = (ptr += sizeof(virtio_queue_t));
     queue->available = (ptr += VIRTIO_RING_SIZE * sizeof(virtio_descriptor_t));
+    queue->available->flags = 0;
     queue->used = (ptr += sizeof(virtio_available_t));
 
     // Notify device of queue
