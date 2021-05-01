@@ -17,7 +17,7 @@ SECTIONS
   stack_top = .;
 
   . = ALIGN(4096);
-  heap_bottom = .;
+  PROVIDE(heap_bottom = .);
 
   /* End of uninitalized data segement */
 }

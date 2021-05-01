@@ -120,7 +120,7 @@ uart_put_hex_return:
 # a1: char      - The character to be printed out.
 # Returns: nothing
 # Used registers:
-# - a1
+# - a0
 # - t0
 # - t1
 uart_putc:
@@ -128,7 +128,28 @@ uart_putc:
     li t0, UART_BASE
 
     # Wait until UART is ready for the next character
+uart_putc_wait:
+    lbu t1, 0x05(t0)
+    andi t1, t1, 0b01000000
+    beqz t1, uart_putc_wait
+
+    # Send character
+    sw a0, 0x00(t0)
+    ret
+
+
+# putc_wait(char) -> void
+# Puts a character onto the UART port. This is used by the assembly functions here since it takes in its argument in a1, saving time pushing onto the stack.
+#
+# Parameters:
+# a1: char      - The character to be printed out.
+# Returns: nothing
+# Used registers:
+# - a1
+# - t0
+# - t1
 putc_wait:
+    # Wait until UART is ready for the next character
     lbu t1, 0x05(t0)
     andi t1, t1, 0b01000000
     beqz t1, putc_wait

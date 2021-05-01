@@ -1,6 +1,8 @@
 #ifndef KERNEL_VIRTIO_H
 #define KERNEL_VIRTIO_H
 
+#include "../memory.h"
+
 #define VIRTIO_GENERIC_INIT(addr, device_features, device_specific)                                      \
     do {                                                                                                 \
         /* 1. Reset the device (set status register to zero) */                                          \
@@ -35,7 +37,6 @@
 
 #define VIRTIO_MMIO_BASE 0x10001000
 #define VIRTIO_RING_SIZE (1 << 7)
-#define PAGE_SIZE 4096
 #define VIRTIO_DEVICE_COUNT 8
 
 enum {

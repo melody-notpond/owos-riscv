@@ -1,8 +1,6 @@
 #include "block.h"
+#include "../memory.h"
 #include "../uart.h"
-
-// Heap bottom
-extern unsigned long long heap_bottom;
 
 // Devices
 virtio_block_device_t block_devices[VIRTIO_DEVICE_COUNT] = { { 0 } };
@@ -25,23 +23,22 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
         mmio->queue_num = VIRTIO_RING_SIZE;
 
         // Create block device
-        unsigned int page_count = (sizeof(virtio_queue_t) + PAGE_SIZE - 1) / PAGE_SIZE;
+        unsigned long long page_count = (sizeof(virtio_queue_t) + PAGE_SIZE - 1) / PAGE_SIZE;
         uart_puts("Block device has 0x");
-        uart_put_hex((long long) page_count);
+        uart_put_hex(page_count);
         uart_puts(" pages.\n");
 
         // Select queue
         mmio->queue_sel = 0;
 
         // Allocate queue
-        volatile virtio_queue_t* queue = (volatile virtio_queue_t*) heap_bottom;
-        heap_bottom += page_count * PAGE_SIZE;
+        volatile virtio_queue_t* queue = (volatile virtio_queue_t*) alloc(page_count);
 
         // Set page size
         mmio->guest_page_size = PAGE_SIZE;
 
         // Set queuepfn
-        mmio->queue_pfn = ((long long) queue) / PAGE_SIZE;
+        mmio->queue_pfn = ((unsigned long long) queue) / PAGE_SIZE;
 
         // Add block device
         long long i = (((long long) mmio) - VIRTIO_MMIO_BASE) >> 12;
