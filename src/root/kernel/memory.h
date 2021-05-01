@@ -3,6 +3,10 @@
 
 #define PAGE_SIZE 4096
 
+// init_heap_metadata(void) -> void
+// Initialised the heap by allocating space for page metadata.
+void init_heap_metadata();
+
 // alloc(unsigned long long) -> void*
 // Returns a zeroed out pointer to consecutive pages in memory.
 void* alloc(unsigned long long page_count);
