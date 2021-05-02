@@ -38,15 +38,8 @@ interrupt_handler:
     sd x30, 0xf0(sp)
     sd x31, 0xf8(sp)
 
-    #/*
-    # Print out debug info
-    la a0, interrupt_msg
-    jal uart_puts
     csrr a0, mcause
-    jal uart_put_hex
-    la a0, '\n'
-    jal uart_putc
-    #*/
+    jal handle_interrupt
 
     ld x1, 0x08(sp)
     ld x2, 0x10(sp)
@@ -82,12 +75,6 @@ interrupt_handler:
     addi sp, sp, 0x100
     csrrw sp, mscratch, sp
     mret
-
-
-.section .rodata
-interrupt_msg:
-    .string "Received interrupt for 0x"
-    .byte 0
 
 
 .section .bss

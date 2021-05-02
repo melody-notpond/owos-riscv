@@ -48,6 +48,11 @@ enum {
 };
 
 enum {
+    VIRTIO_INTERRUPT_USED_RING_UPDATE = 1,
+    VIRTIO_INTERRUPT_CONFIGURATION_CHANGE = 2,
+};
+
+enum {
     VIRTIO_DESCRIPTOR_FLAG_NEXT = 1,
     VIRTIO_DESCRIPTOR_FLAG_WRITE_ONLY = 2,
     VIRTIO_DESCRIPTOR_FLAG_INDIRECT = 4,
@@ -78,60 +83,60 @@ typedef struct __attribute__((__packed__, aligned(1))) {
 } virtio_used_t;
 
 typedef struct __attribute__((__packed__, aligned(1))) {
-    volatile unsigned long long num;
+    volatile unsigned int num;
+    volatile unsigned int last_seen_used;
     volatile virtio_descriptor_t* desc;
     volatile virtio_available_t* available;
-    // unsigned char rsv1[PAGE_SIZE - sizeof(virtio_descriptor_t) * VIRTIO_RING_SIZE - sizeof(virtio_available_t)];
     volatile virtio_used_t* used;
 } virtio_queue_t;
 
 typedef struct __attribute__((__packed__, aligned(4))) {
-    unsigned int magic_value;
-	unsigned int version;
-	unsigned int device_id;
-	unsigned int vendor_id;
+    volatile unsigned int magic_value;
+	volatile unsigned int version;
+	volatile unsigned int device_id;
+	volatile unsigned int vendor_id;
 
-	unsigned int device_features;
-	unsigned int device_features_sel;
-	unsigned char rsv1[8];
+	volatile unsigned int device_features;
+	volatile unsigned int device_features_sel;
+	volatile unsigned char rsv1[8];
 
-	unsigned int driver_features;
-	unsigned int driver_features_sel;
-	unsigned char rsv2[8];
+	volatile unsigned int driver_features;
+	volatile unsigned int driver_features_sel;
+	volatile unsigned char rsv2[8];
 
-	unsigned int queue_sel;
-	unsigned int queue_num_max;
-	unsigned int queue_num;
-	unsigned char rsv3[4];
+	volatile unsigned int queue_sel;
+	volatile unsigned int queue_num_max;
+	volatile unsigned int queue_num;
+	volatile unsigned char rsv3[4];
 
-	unsigned char rsv4[4];
-	unsigned int queue_ready;
-	unsigned char rsv5[8];
+	volatile unsigned char rsv4[4];
+	volatile unsigned int queue_ready;
+	volatile unsigned char rsv5[8];
 
-	unsigned int queue_notify;
-	unsigned char rsv6[12];
+	volatile unsigned int queue_notify;
+	volatile unsigned char rsv6[12];
 
-	unsigned int interrupt_status;
-	unsigned int interrupt_ack;
-	unsigned char rsv7[8];
+	volatile unsigned int interrupt_status;
+	volatile unsigned int interrupt_ack;
+	volatile unsigned char rsv7[8];
 
-	unsigned int status;
-	unsigned char rsv8[12];
+	volatile unsigned int status;
+	volatile unsigned char rsv8[12];
 
-    unsigned int queue_desc_low;
-    unsigned int queue_desc_high;
-	unsigned char rsv9[8];
+    volatile unsigned int queue_desc_low;
+    volatile unsigned int queue_desc_high;
+	volatile unsigned char rsv9[8];
 
-    unsigned int queue_avail_low;
-    unsigned int queue_avail_high;
-	unsigned char rsv10[8];
+    volatile unsigned int queue_avail_low;
+    volatile unsigned int queue_avail_high;
+	volatile unsigned char rsv10[8];
 
-    unsigned int queue_used_low;
-    unsigned int queue_used_high;
-	unsigned char rsv11[8];
+    volatile unsigned int queue_used_low;
+    volatile unsigned int queue_used_high;
+	volatile unsigned char rsv11[8];
 
-	unsigned char rsv12[0x4c];
-    unsigned int config_gen;
+	volatile unsigned char rsv12[0x4c];
+    volatile unsigned int config_gen;
 
 	volatile char config[];
 } virtio_mmio_t;

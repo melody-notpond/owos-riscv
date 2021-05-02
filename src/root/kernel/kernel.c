@@ -6,7 +6,7 @@ void kmain() {
     uart_puts("Writing test data to block.\n");
     virtio_block_write(7, 0, "hewwo uwu aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 512);
     uart_puts("Wrote to block device.\n");
-    uart_puts("Reading test data to block\n");
+    uart_puts("Reading test data from block\n");
     char data[513];
     data[512] = 0;
     virtio_block_read(7, 0, data, 512);
@@ -27,6 +27,6 @@ void kinit() {
     virtio_probe();
     uart_puts("Finished initialisation.\n");
 
-    kmain();
+    asm("j interrupt_init");
 }
 

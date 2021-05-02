@@ -1,9 +1,21 @@
 #include "block.h"
+#include "../interrupts.h"
 #include "../memory.h"
 #include "../uart.h"
 
 // Devices
 virtio_block_device_t block_devices[VIRTIO_DEVICE_COUNT] = { { 0 } };
+
+void virtio_block_mei_handler(unsigned int mei_id) {
+    volatile virtio_block_device_t* device = &block_devices[mei_id - 1];
+    unsigned int status = device->mmio->interrupt_status;
+
+    if (status == VIRTIO_INTERRUPT_USED_RING_UPDATE) {
+    }
+    uart_puts("uwu\n");
+
+    device->mmio->interrupt_ack = status;
+}
 
 char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     char ro;
@@ -40,6 +52,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     volatile virtio_queue_t* queue = alloc(page_count);
     void* ptr = (void*) queue;
     queue->num = 0;
+    queue->last_seen_used = 0;
     queue->desc = (ptr += sizeof(virtio_queue_t));
     queue->available = (ptr += VIRTIO_RING_SIZE * sizeof(virtio_descriptor_t));
     queue->available->flags = 0;
@@ -78,6 +91,11 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
         .ro = ro
     };
 
+    // Add interrupt
+    if (register_mei_handler(i + 1, 7, virtio_block_mei_handler)) {
+        uart_puts("Warning: interrupt handler for block device is unregistered\n");
+    }
+
     // Finish initialisation
     VIRTIO_GENERIC_INIT_FINISH(mmio);
     return 0;
@@ -112,7 +130,6 @@ virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, un
         .sector = sector
     };
     unsigned char* status = (unsigned char*) (request + 1);
-    *status = 0xff;
 
     virtio_block_device_t* device = &block_devices[block_id];
 
