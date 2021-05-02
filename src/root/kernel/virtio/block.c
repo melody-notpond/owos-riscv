@@ -3,77 +3,78 @@
 #include "../memory.h"
 #include "../uart.h"
 
+typedef struct __attribute__((__packed__, aligned(1))) { 
+    unsigned long long capacity; 
+    unsigned int size_max; 
+    unsigned int seg_max; 
+    struct { 
+        unsigned short cylinders; 
+        unsigned char heads; 
+        unsigned char sectors; 
+    } geometry; 
+    unsigned int blk_size; 
+    struct { 
+        unsigned char physical_block_exp; 
+        unsigned char alignment_offset; 
+        unsigned short min_io_size; 
+        unsigned int opt_io_size; 
+    } topology; 
+    unsigned char writeback; 
+} virtio_block_config_t;
+
+typedef struct {
+    volatile virtio_queue_t* queue;
+    volatile virtio_mmio_t* mmio;
+    volatile virtio_block_config_t* config;
+    char in_use;
+    char ro;
+} virtio_block_device_t;
+
+typedef struct __attribute__((__packed__, aligned(4))) {
+    unsigned int type;
+    unsigned char rsv1[4];
+    unsigned long long sector;
+} virtio_block_request_t;
+
 // Devices
 virtio_block_device_t block_devices[VIRTIO_DEVICE_COUNT] = { { 0 } };
 
+// virtio_block_mei_handler(unsigned int) -> void
+// Handles a machine external interrupt for a virtio block device.
 void virtio_block_mei_handler(unsigned int mei_id) {
+    // Acknowledge the interrupt
     volatile virtio_block_device_t* device = &block_devices[mei_id - 1];
     unsigned int status = device->mmio->interrupt_status;
+    device->mmio->interrupt_ack = status;
 
     if (status == VIRTIO_INTERRUPT_USED_RING_UPDATE) {
+        // Free memory that is no longer used
+        char first = 1;
+        while (1) {
+            // The first chunk of each descriptor is the request header, which is allocated as a 4 KiB page (pretty wasteful i know :/)
+            unsigned short id = device->queue->used->ring[device->queue->last_seen_used].id;
+            if (first) {
+                dealloc(device->queue->desc[id].addr);
+                first = 0;
+            }
+            first = !(device->queue->desc->flags & VIRTIO_DESCRIPTOR_FLAG_NEXT);
+
+            device->queue->last_seen_used++;
+
+            if (device->queue->last_seen_used == device->queue->used->idx)
+                break;
+        }
     }
     uart_puts("uwu\n");
-
-    device->mmio->interrupt_ack = status;
 }
 
 char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     char ro;
     VIRTIO_GENERIC_INIT(mmio, ro = (features & (1 << 5)) != 0;);
 
-    // Check queue size
-    unsigned int queue_num_max = mmio->queue_num_max;
-
-    // If the queue size is too small, give up
-    if (queue_num_max < VIRTIO_RING_SIZE) {
-        uart_puts("Queue size is invalid.");
+    volatile virtio_queue_t* queue = virtqueue_add_to_device(mmio);
+    if (queue == 0)
         return -1;
-    }
-
-    // Select queue
-    mmio->queue_sel = 0;
-
-    // Set queue size
-    mmio->queue_num = VIRTIO_RING_SIZE;
-
-    // Create block device queue
-    unsigned long long page_count = (sizeof(virtio_queue_t) + VIRTIO_RING_SIZE * sizeof(virtio_descriptor_t) + sizeof(virtio_available_t) + sizeof(virtio_used_t) + PAGE_SIZE - 1) / PAGE_SIZE;
-    uart_puts("Queue for block device has 0x");
-    uart_put_hex(page_count);
-    uart_puts(" pages.\n");
-
-    // Check that queue is not in use
-    if (mmio->queue_ready) {
-        uart_puts("Queue is being used somehow.\n");
-        return -1;
-    }
-
-    // Allocate queue
-    volatile virtio_queue_t* queue = alloc(page_count);
-    void* ptr = (void*) queue;
-    queue->num = 0;
-    queue->last_seen_used = 0;
-    queue->desc = (ptr += sizeof(virtio_queue_t));
-    queue->available = (ptr += VIRTIO_RING_SIZE * sizeof(virtio_descriptor_t));
-    queue->available->flags = 0;
-    queue->available->idx = 0;
-    queue->used = (ptr += sizeof(virtio_available_t));
-    queue->used->flags = 0;
-    queue->used->idx = 0;
-
-    // Notify device of queue
-    mmio->queue_num = VIRTIO_RING_SIZE;
-
-    // Give device queue addresses
-    mmio->queue_desc_low = (unsigned int) (unsigned long long) queue->desc;
-    mmio->queue_desc_high = ((unsigned int) (((unsigned long long) queue->desc) >> 32));
-    mmio->queue_avail_low = (unsigned int) (unsigned long long) queue->available;
-    mmio->queue_avail_high = ((unsigned int) (((unsigned long long) queue->available) >> 32));
-    mmio->queue_used_low = (unsigned int) (unsigned long long) queue->used;
-    mmio->queue_used_high = ((unsigned int) (((unsigned long long) queue->used) >> 32));
-
-    // State that queue is ready
-    mmio->queue_ready = 1;
 
     // Get config
     volatile virtio_block_config_t* config = (volatile virtio_block_config_t*) mmio->config;
@@ -112,7 +113,7 @@ enum {
     VIRTIO_BLOCK_REQUEST_TYPE_FLUSH = 4,
 };
 
-virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, unsigned char block_id, unsigned long long sector, void* data, unsigned long long size) {
+virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, unsigned char block_id, unsigned long long sector, void* data, unsigned long long size, volatile unsigned char* status) {
     if (block_id >= 8) {
         return VIRTIO_BLOCK_ERROR_CODE_INVALID_DEVICE;
     } else if (!block_devices[block_id].in_use) {
@@ -129,8 +130,6 @@ virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, un
         .type = rw == VIRTIO_BLOCK_OPERATION_WRITE ? VIRTIO_BLOCK_REQUEST_TYPE_OUT : VIRTIO_BLOCK_REQUEST_TYPE_IN,
         .sector = sector
     };
-    unsigned char* status = (unsigned char*) (request + 1);
-
     virtio_block_device_t* device = &block_devices[block_id];
 
     device->queue->desc[device->queue->num].addr = request;
@@ -155,11 +154,15 @@ virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, un
     return VIRTIO_BLOCK_ERROR_CODE_SUCCESS;
 }
 
-virtio_block_error_code_t virtio_block_read(unsigned char block_id, unsigned long long sector, void* data, unsigned long long size) {
-    return virtio_block_operation(VIRTIO_BLOCK_OPERATION_READ, block_id, sector, data, size);
+// virtio_block_read(unsigned char, unsigned long long, void*, unsigned long long, volatile unsigned char*) -> virtio_block_error_code_t
+// Reads sectors from a block device and dumps them into the provided pointer. Status is set to 0xff and remains 0xff until the read is finished.
+virtio_block_error_code_t virtio_block_read(unsigned char block_id, unsigned long long sector, void* data, unsigned long long sector_count, volatile unsigned char* status) {
+    return virtio_block_operation(VIRTIO_BLOCK_OPERATION_READ, block_id, sector, data, sector_count * 512, status);
 }
 
-virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long size) {
-    return virtio_block_operation(VIRTIO_BLOCK_OPERATION_WRITE, block_id, sector, data, size);
+// virtio_block_write(unsigned char, unsigned long long, void*, unsigned long long, volatile unsigned char*) -> virtio_block_error_code_t
+// Reads sectors from a block device and dumps them into the provided pointer. Status is set to 0xff and remains 0xff until the read is finished.
+virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long sector_count, volatile unsigned char* status) {
+    return virtio_block_operation(VIRTIO_BLOCK_OPERATION_WRITE, block_id, sector, data, sector_count * 512, status);
 }
 
