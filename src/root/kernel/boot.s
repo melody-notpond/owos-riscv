@@ -25,13 +25,13 @@ _start:
     csrw mtvec, t0
 
     # Enable interrupts
-    li t0, 0b100000001000
+    li t0, 0x888
     csrs mie, t0
-    li t0, 0b00001000
+    li t0, 0x8
     csrs mstatus, t0
 
     # Jump to kernel
-    jal kinit
+    j kinit
 finish:
     j finish
 

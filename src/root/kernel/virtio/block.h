@@ -32,12 +32,6 @@ typedef struct {
     char ro;
 } virtio_block_device_t;
 
-enum {
-    VIRTIO_BLOCK_REQUEST_TYPE_IN = 0,
-    VIRTIO_BLOCK_REQUEST_TYPE_OUT = 1,
-    VIRTIO_BLOCK_REQUEST_TYPE_FLUSH = 4,
-};
-
 typedef struct __attribute__((__packed__, aligned(4))) {
     unsigned int type;
     unsigned char rsv1[4];
@@ -55,6 +49,8 @@ typedef enum {
     VIRTIO_BLOCK_ERROR_CODE_READ_ONLY,
     VIRTIO_BLOCK_ERROR_CODE_OPERATION_BEYOND_CAPACITY
 } virtio_block_error_code_t;
+
+virtio_block_error_code_t virtio_block_read(unsigned char block_id, unsigned long long sector, void* data, unsigned long long size);
 
 virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long size);
 

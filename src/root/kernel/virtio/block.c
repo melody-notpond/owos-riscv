@@ -43,7 +43,10 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     queue->desc = (ptr += sizeof(virtio_queue_t));
     queue->available = (ptr += VIRTIO_RING_SIZE * sizeof(virtio_descriptor_t));
     queue->available->flags = 0;
+    queue->available->idx = 0;
     queue->used = (ptr += sizeof(virtio_available_t));
+    queue->used->flags = 0;
+    queue->used->idx = 0;
 
     // Notify device of queue
     mmio->queue_num = VIRTIO_RING_SIZE;
@@ -80,12 +83,23 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     return 0;
 }
 
-virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long size) {
+typedef enum {
+    VIRTIO_BLOCK_OPERATION_READ = 0,
+    VIRTIO_BLOCK_OPERATION_WRITE = 1
+} virtio_block_operation_t;
+
+enum {
+    VIRTIO_BLOCK_REQUEST_TYPE_IN = 0,
+    VIRTIO_BLOCK_REQUEST_TYPE_OUT = 1,
+    VIRTIO_BLOCK_REQUEST_TYPE_FLUSH = 4,
+};
+
+virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, unsigned char block_id, unsigned long long sector, void* data, unsigned long long size) {
     if (block_id >= 8) {
         return VIRTIO_BLOCK_ERROR_CODE_INVALID_DEVICE;
     } else if (!block_devices[block_id].in_use) {
         return VIRTIO_BLOCK_ERROR_CODE_NOT_BLOCK_DEVICE;
-    } else if (block_devices[block_id].ro) {
+    } else if (rw == VIRTIO_BLOCK_OPERATION_WRITE && block_devices[block_id].ro) {
         return VIRTIO_BLOCK_ERROR_CODE_READ_ONLY;
     } else if (block_devices[block_id].config->capacity < sector) {
         return VIRTIO_BLOCK_ERROR_CODE_OPERATION_BEYOND_CAPACITY;
@@ -94,11 +108,11 @@ virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned lo
     // Allocate request
     virtio_block_request_t* request = alloc(1);
     *request = (virtio_block_request_t) {
-        .type = VIRTIO_BLOCK_REQUEST_TYPE_OUT,
+        .type = rw == VIRTIO_BLOCK_OPERATION_WRITE ? VIRTIO_BLOCK_REQUEST_TYPE_OUT : VIRTIO_BLOCK_REQUEST_TYPE_IN,
         .sector = sector
     };
     unsigned char* status = (unsigned char*) (request + 1);
-    *status = 0;
+    *status = 0xff;
 
     virtio_block_device_t* device = &block_devices[block_id];
 
@@ -107,7 +121,7 @@ virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned lo
     device->queue->desc[device->queue->num].length = sizeof(virtio_block_request_t);
     device->queue->desc[device->queue->num].next = device->queue->num + 1;
     device->queue->desc[device->queue->num + 1].addr = data;
-    device->queue->desc[device->queue->num + 1].flags = VIRTIO_DESCRIPTOR_FLAG_NEXT;
+    device->queue->desc[device->queue->num + 1].flags = VIRTIO_DESCRIPTOR_FLAG_NEXT | (rw == VIRTIO_BLOCK_OPERATION_READ ? VIRTIO_DESCRIPTOR_FLAG_WRITE_ONLY : 0);
     device->queue->desc[device->queue->num + 1].length = size;
     device->queue->desc[device->queue->num + 1].next = device->queue->num + 2;
     device->queue->desc[device->queue->num + 2].addr = status;
@@ -122,5 +136,13 @@ virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned lo
     device->mmio->queue_notify = 0;
 
     return VIRTIO_BLOCK_ERROR_CODE_SUCCESS;
+}
+
+virtio_block_error_code_t virtio_block_read(unsigned char block_id, unsigned long long sector, void* data, unsigned long long size) {
+    return virtio_block_operation(VIRTIO_BLOCK_OPERATION_READ, block_id, sector, data, size);
+}
+
+virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long size) {
+    return virtio_block_operation(VIRTIO_BLOCK_OPERATION_WRITE, block_id, sector, data, size);
 }
 
