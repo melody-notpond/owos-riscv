@@ -7,7 +7,9 @@ _start:
     csrr t0, mhartid
     bnez t0, finish
 
-    # Initialise stack pointer
+    # Initialise stack pointer and mscratch
+    la sp, isr_stack_end
+    csrrw sp, mscratch, sp
     la sp, stack_top
     mv fp, sp
 

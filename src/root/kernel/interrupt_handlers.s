@@ -4,7 +4,7 @@
 
 
 interrupt_handler:
-    # csrrw sp, mscratch, sp
+    csrrw sp, mscratch, sp
     addi sp, sp, -0x80
     sd x1, 0x08(sp)
     sd x2, 0x10(sp)
@@ -48,6 +48,7 @@ interrupt_handler:
     ld x14, 0x70(sp)
     ld x15, 0x78(sp)
     addi sp, sp, 0x80
+    csrrw sp, mscratch, sp
     mret
 
 
@@ -56,3 +57,10 @@ interrupt_msg:
     .string "Received interrupt for 0x"
     .byte 0
 
+
+.section .bss
+.align 4
+isr_stack_start:
+    .skip 2048
+isr_stack_end:
+.global isr_stack_end
