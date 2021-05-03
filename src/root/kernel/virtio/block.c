@@ -60,11 +60,6 @@ void virtio_block_mei_handler(unsigned int mei_id) {
                 break;
         }
     }
-    device->queue->available->flags = 0;
-    device->queue->available->event = 0;
-    device->queue->used->flags = 0;
-    device->queue->used->event = 0;
-    uart_puts("uwu\n");
 }
 
 char virtio_init_block_device(volatile virtio_mmio_t* mmio) {

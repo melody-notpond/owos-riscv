@@ -1,6 +1,6 @@
 #include "uart.h"
 
-#define INTERRUPT_DEBUG
+//#define INTERRUPT_DEBUG
 #define PLIC_BASE  0x0c000000
 #define PLIC_CLAIM 0x0c200004
 
