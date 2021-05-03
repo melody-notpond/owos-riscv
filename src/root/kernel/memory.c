@@ -91,8 +91,8 @@ void dealloc(void* ptr) {
         // Mark pages as free
         *cp = PAGE_ALLOC_BYTE_FREE;
         page_ptr++;
+        cp++;
     }
-
-    (*page_ptr)[PAGE_SIZE - 1] = 0;
+    *cp = PAGE_ALLOC_BYTE_FREE;
 }
 
