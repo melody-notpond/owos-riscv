@@ -1,4 +1,5 @@
 #include "block.h"
+#include "gpu.h"
 #include "../uart.h"
 #include "virtio.h"
 
@@ -36,8 +37,17 @@ void virtio_probe() {
                 else
                     uart_puts("Block device initialised successfully!\n");
                 break;
+            case 0x10:
+                uart_puts("Device is a graphics device. Initialising...\n");
+                if (virtio_init_graphics_device(mmio))
+                    uart_puts("Failed to initialise graphics device\n");
+                else
+                    uart_puts("Graphics device initialised successfully!\n");
+                break;
             default:
-                uart_puts("Unknown device. Resuming probing.\n");
+                uart_puts("Unknown device 0x");
+                uart_put_hex(mmio->device_id);
+                uart_puts(". Resuming probing.\n");
                 break;
         }
     }

@@ -36,7 +36,7 @@ char is_used(page_t* ptr) {
 }
 
 char is_last(page_t* ptr) {
-    return *(((char*) &heap_bottom) + (ptr - heap_start) / PAGE_SIZE) == PAGE_ALLOC_BYTE_LAST;
+    return (*(((char*) &heap_bottom) + (ptr - heap_start) / PAGE_SIZE) & PAGE_ALLOC_BYTE_LAST) != 0;
 }
 
 // alloc(unsigned long long) -> void*
