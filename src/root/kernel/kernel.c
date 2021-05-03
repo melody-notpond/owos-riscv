@@ -26,6 +26,7 @@ void kmain() {
 
     // File system stuff
     ext2fs_superblock_t* superblock = ext2_load_superblock();
+    ext2fs_block_descriptor_t* descriptor_table = ext2_load_block_descriptor_table(superblock);
 
     // Hang
     while (1) {

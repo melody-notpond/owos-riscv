@@ -68,7 +68,46 @@ typedef struct __attribute__((__packed__, aligned(1))) {
     unsigned char rsv3[760];
 } ext2fs_superblock_t;
 
+typedef struct __attribute__((__packed__, aligned(2))) {
+    unsigned int block_bitmap;
+    unsigned int inode_bitmap;
+    unsigned int inode_table;
+    unsigned short free_blocks_count;
+    unsigned short free_inodes_count;
+
+    unsigned short used_dirs_count;
+    unsigned char rsv1[14];
+} ext2fs_block_descriptor_t;
+
+typedef struct __attribute__((__packed__, aligned(2))) {
+    unsigned short mode;
+    unsigned short uid;
+    unsigned int size;
+    unsigned int atime;
+    unsigned int ctime;
+
+    unsigned int mtime;
+    unsigned int dtime;
+    unsigned short gid;
+    unsigned short links_count;
+    unsigned int blocks;
+
+    unsigned int flags;
+    unsigned int osd1;
+
+    unsigned int block[15];
+
+    unsigned int generation;
+    unsigned int file_acl;
+    unsigned int dir_acl;
+    unsigned int faddr;
+
+    unsigned char osd2[12];
+} ext2fs_inode_t;
+
 ext2fs_superblock_t* ext2_load_superblock();
+
+ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(ext2fs_superblock_t* superblock);
 
 #endif /* KERNEL_FS_EXT2_GPU_H */
 
