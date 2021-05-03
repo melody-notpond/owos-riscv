@@ -1,0 +1,74 @@
+#ifndef KERNEL_FS_EXT2_GPU_H
+#define KERNEL_FS_EXT2_GPU_H
+
+typedef struct __attribute__((__packed__, aligned(1))) {
+    unsigned int inodes_count;
+    unsigned int blocks_count;
+    unsigned int r_blocks_count;
+    unsigned int free_blocks_count;
+
+    unsigned int free_inodes_count;
+    unsigned int first_data_block;
+    unsigned int log_block_size;
+    unsigned int log_frag_size;
+
+    unsigned int blocks_per_group;
+    unsigned int frags_per_group;
+    unsigned int inodes_per_group;
+    unsigned int mtime;
+
+    unsigned int wtime;
+    unsigned short mnt_count;
+    unsigned short max_mnt_count;
+    unsigned short magic;
+    unsigned short state;
+    unsigned short errors;
+    unsigned short minor_rev_level;
+
+    unsigned int last_check;
+    unsigned int check_interval;
+    unsigned int creator_os;
+    unsigned int rev_level;
+
+    unsigned short def_resuid;
+    unsigned short def_resgid;
+    unsigned int first_ino;
+    unsigned short inode_size;
+    unsigned short block_group_nr;
+    unsigned int feature_compat;
+
+    unsigned int feature_incompat;
+    unsigned int feature_ro_compat;
+
+    unsigned char uuid[16];
+
+    unsigned char volume_name[16];
+
+    unsigned char last_mounted[64];
+
+    unsigned int algo_bitmap;
+    unsigned char prealloc_blocks;
+    unsigned char prealloc_dir_blocks;
+
+    unsigned char rsv1[2];
+
+    unsigned char journal_uuid[16];
+
+    unsigned int journal_inum;
+    unsigned int journal_dev;
+    unsigned int last_orphan;
+
+    unsigned int hash_seed[4];
+    unsigned char def_hash_version;
+    unsigned char rsv2[3];
+
+    unsigned int default_mount_options;
+    unsigned int first_meta_bg;
+
+    unsigned char rsv3[760];
+} ext2fs_superblock_t;
+
+ext2fs_superblock_t* ext2_load_superblock();
+
+#endif /* KERNEL_FS_EXT2_GPU_H */
+

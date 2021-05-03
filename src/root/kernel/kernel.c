@@ -1,3 +1,4 @@
+#include "filesystems/ext2.h"
 #include "memory.h"
 #include "uart.h"
 #include "virtio/block.h"
@@ -7,6 +8,7 @@ void kmain() {
     uart_puts("Finished initialisation.\n");
 
     // Temporary block writing tests
+    /*
     volatile unsigned char status;
     uart_puts("Writing test data to block.\n");
     virtio_block_write(7, 0, "hewwo uwu aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 1, &status);
@@ -20,6 +22,10 @@ void kmain() {
     uart_puts("Read data to memory: ");
     uart_puts(data);
     uart_putc('\n');
+    */
+
+    // File system stuff
+    ext2fs_superblock_t* superblock = ext2_load_superblock();
 
     // Hang
     while (1) {
