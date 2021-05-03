@@ -14,6 +14,7 @@
                                                                                                          \
         /* 4. Read device specific features */                                                           \
         unsigned int features = addr->device_features;                                                   \
+        features &= ~(1 << 29);                                                                          \
         { device_features_do }                                                                           \
         addr->driver_features = features;                                                                \
                                                                                                          \
@@ -35,7 +36,9 @@
 
 
 #define VIRTIO_MMIO_BASE 0x10001000
-#define VIRTIO_DEVICE_COUNT 8
+#define VIRTIO_MMIO_INTERVAL 0x1000
+#define VIRTIO_MMIO_TOP 0x010008000
+#define VIRTIO_DEVICE_COUNT ((VIRTIO_MMIO_TOP - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL)
 
 enum {
     VIRTIO_DEVICE_STATUS_ACKNOWLEDGE = 1,

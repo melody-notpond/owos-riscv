@@ -49,15 +49,10 @@ void virtio_block_mei_handler(unsigned int mei_id) {
 
     if (status == VIRTIO_INTERRUPT_USED_RING_UPDATE) {
         // Free memory that is no longer used
-        char first = 1;
         while (1) {
-            // The first chunk of each descriptor is the request header, which is allocated as a 4 KiB page (pretty wasteful i know :/)
+            // The first chunk of each descriptor is the request header, which is allocated as a 4 KiB page
             unsigned short id = device->queue->used->ring[device->queue->last_seen_used].id;
-            if (first) {
-                dealloc(device->queue->desc[id].addr);
-                first = 0;
-            }
-            first = !(device->queue->desc->flags & VIRTIO_DESCRIPTOR_FLAG_NEXT);
+            dealloc((void*) device->queue->desc[id].addr);
 
             device->queue->last_seen_used++;
 
@@ -65,6 +60,10 @@ void virtio_block_mei_handler(unsigned int mei_id) {
                 break;
         }
     }
+    device->queue->available->flags = 0;
+    device->queue->available->event = 0;
+    device->queue->used->flags = 0;
+    device->queue->used->event = 0;
     uart_puts("uwu\n");
 }
 

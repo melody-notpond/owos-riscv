@@ -12,7 +12,7 @@ enum {
 };
 
 typedef struct __attribute__((__packed__, aligned(1))) {
-    void* addr;
+    volatile void* addr;
     unsigned int length;
     unsigned short flags;
     unsigned short next;

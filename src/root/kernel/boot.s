@@ -34,7 +34,7 @@ interrupt_init:
     sw t0, (t1)
     sw t0, 0x4(t1)
 
-    /* This is for debugging purposes
+    #/* This is for debugging purposes
     # Set interrupt priorities
     li t0, 0x7
     li t1, 0x0c000004
