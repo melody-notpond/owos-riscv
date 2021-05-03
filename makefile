@@ -5,7 +5,6 @@ EMU=qemu-system-riscv64
 EFLAGS=-machine virt -nographic -m 256m -device virtio-blk-device,scsi=off,drive=foo -bios none -global virtio-mmio.force-legacy=false -device virtio-gpu-device
 
 all: iso
-	chmod 777 -R build/ obj/
 
 run:
 	$(EMU) $(EFLAGS) -kernel build/root/kernel -drive if=none,format=raw,file=build/drive.iso,id=foo
@@ -14,9 +13,13 @@ iso: kernel
 	ls build/drive.iso || dd if=/dev/zero of=build/drive.iso bs=1M count=2048
 	mkfs.ext2 -F build/drive.iso
 	mkdir -p mnt
-	mount build/drive.iso mnt
+
+mount:
+	sudo mount build/drive.iso mnt
+	sudo chown -R $(shell whoami) mnt
 	cp -r build/root/* mnt/
-	umount mnt
+	sudo umount mnt
+
 
 kernel: $(CODE)kernel/boot.s $(CODE)kernel/*.s $(CODE)kernel/*.c $(CODE)kernel/virtio/*.c $(CODE)kernel/filesystems/*.c
 	mkdir -p build/root
