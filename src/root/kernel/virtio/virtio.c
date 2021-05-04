@@ -34,7 +34,7 @@ void virtio_probe(generic_block_t** last_block) {
                     uart_puts("Failed to initialise block device\n");
                 } else {
                     uart_puts("Block device initialised successfully!\n");
-                    virtio_block_make_generic(((unsigned long long) base - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL - 1, last_block);
+                    virtio_block_make_generic(((unsigned long long) base - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL, last_block);
                 }
                 break;
             case 0x10:

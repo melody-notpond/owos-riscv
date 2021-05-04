@@ -78,7 +78,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
 
     // Add block device
     long long i = (((long long) mmio) - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL;
-    block_devices[i - 1] = (virtio_block_device_t) {
+    block_devices[i] = (virtio_block_device_t) {
         .queue = queue,
         .mmio = mmio,
         .config = config,
