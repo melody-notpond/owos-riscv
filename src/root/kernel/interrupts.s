@@ -84,6 +84,6 @@ interrupt_handler:
 .section .bss
 .align 4
 isr_stack_start:
-    .skip 2048
+    .skip 8192
 isr_stack_end:
 .global isr_stack_end

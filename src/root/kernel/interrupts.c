@@ -64,11 +64,13 @@ void handle_interrupt(unsigned long long mcause) {
 
     // Synchronous interrupts
     } else {
-        uart_puts("synchronous interrupt\n");
+        uart_puts("synchronous interrupt: 0x");
+        uart_put_hex(mcause);
         switch (mcause) {
             default:
                 break;
         }
+        while (1);
     }
 }
 

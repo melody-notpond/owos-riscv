@@ -27,6 +27,15 @@ void kmain() {
     // File system stuff
     ext2fs_superblock_t* superblock = ext2_load_superblock();
     ext2fs_block_descriptor_t* descriptor_table = ext2_load_block_descriptor_table(superblock);
+    ext2fs_inode_t* root_inode = ext2_get_root_inode(superblock, descriptor_table);
+
+    uart_puts("Root inode has 0x");
+    uart_put_hex(root_inode->blocks);
+    uart_puts(" entries.\nRoot inode entries:\n");
+    for (int i = 0; i < 15; i++) {
+        uart_put_hex(root_inode->block[i]);
+        uart_putc('\n');
+    }
 
     // Hang
     while (1) {

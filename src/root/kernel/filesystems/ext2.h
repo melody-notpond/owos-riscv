@@ -109,5 +109,7 @@ ext2fs_superblock_t* ext2_load_superblock();
 
 ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(ext2fs_superblock_t* superblock);
 
+ext2fs_inode_t* ext2_get_root_inode(ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table);
+
 #endif /* KERNEL_FS_EXT2_GPU_H */
 

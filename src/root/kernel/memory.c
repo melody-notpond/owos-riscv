@@ -28,29 +28,37 @@ void init_heap_metadata() {
 }
 
 char is_free(page_t* ptr) {
-    return *(((char*) &heap_bottom) + (ptr - heap_start) / PAGE_SIZE) == PAGE_ALLOC_BYTE_FREE;
+    char* cp = ((char*) &heap_bottom) + (((char*) ptr) - (char*) heap_start) / PAGE_SIZE;
+    return *cp == PAGE_ALLOC_BYTE_FREE;
 }
 
 char is_used(page_t* ptr) {
-    return *(((char*) &heap_bottom) + (ptr - heap_start) / PAGE_SIZE) != PAGE_ALLOC_BYTE_FREE;
+    char* cp = ((char*) &heap_bottom) + (((char*) ptr) - (char*) heap_start) / PAGE_SIZE;
+    return *cp != PAGE_ALLOC_BYTE_FREE;
 }
 
 char is_last(page_t* ptr) {
-    return (*(((char*) &heap_bottom) + (ptr - heap_start) / PAGE_SIZE) & PAGE_ALLOC_BYTE_LAST) != 0;
+    char* cp = ((char*) &heap_bottom) + (((char*) ptr) - (char*) heap_start) / PAGE_SIZE;
+    return (*cp & PAGE_ALLOC_BYTE_LAST) != 0;
 }
 
 // alloc(unsigned long long) -> void*
 // Returns a zeroed out pointer to consecutive pages in memory.
 void* alloc(unsigned long long page_count) {
+    if (page_count == 0)
+        return (void*) 0;
+
     page_t* ptr = heap_start;
+    page_t* heap_end = heap_start + HEAP_SIZE;
 
     // Find a pointer
-    for (; ptr < ((page_t*) heap_start) + HEAP_SIZE; ptr++) {
+    for (; ptr < heap_end; ptr++) {
         if (is_free(ptr)) {
             // Check if consecutive pages are free
             char free = 1;
-            for (unsigned long long i = 1; i < page_count; i++) {
-                if (is_used(ptr + i)) {
+            page_t* end = ptr + page_count;
+            for (page_t* p = ptr + 1; p < end; p++) {
+                if (is_used(p)) {
                     free = 0;
                     break;
                 }
@@ -58,19 +66,18 @@ void* alloc(unsigned long long page_count) {
 
             if (free) {
                 // Clear pages
-                unsigned long long* big_ptr = (unsigned long long*) ptr;
-                for (; big_ptr < (unsigned long long*) (((void*) (ptr + page_count)) + 1); big_ptr++) {
+                volatile unsigned long long* big_ptr = (unsigned long long*) ptr;
+                for (; big_ptr <= (unsigned long long*) ((void*) end); big_ptr++) {
                     *big_ptr = 0;
                 }
 
                 // Mark pages as used
-                char* cp = ((char*) &heap_bottom) + (ptr - heap_start) / PAGE_SIZE;
-                for (page_t* p = ptr; p < ptr + page_count; p++, cp++) {
-                    if (p == ptr + page_count - 1)
-                        *cp = PAGE_ALLOC_BYTE_LAST;
-                    else
-                        *cp = PAGE_ALLOC_BYTE_USED;
+                char* cp = ((char*) &heap_bottom) + (((char*) ptr) - (char*) heap_start) / PAGE_SIZE;
+                char* end = cp + page_count;
+                for (; cp < end; cp++) {
+                    *cp = PAGE_ALLOC_BYTE_USED;
                 }
+                *(cp - 1) = PAGE_ALLOC_BYTE_LAST;
 
                 return (void*) ptr;
             }
@@ -86,7 +93,7 @@ void* alloc(unsigned long long page_count) {
 void dealloc(void* ptr) {
     page_t* page_ptr = (page_t*) ptr;
 
-    char* cp = ((char*) &heap_bottom) + (page_ptr - heap_start) / PAGE_SIZE;
+    char* cp = ((char*) &heap_bottom) + (((char*) page_ptr) - (char*) heap_start) / PAGE_SIZE;
     while (!is_last(page_ptr)) {
         // Mark pages as free
         *cp = PAGE_ALLOC_BYTE_FREE;
@@ -96,3 +103,12 @@ void dealloc(void* ptr) {
     *cp = PAGE_ALLOC_BYTE_FREE;
 }
 
+void memcpy(void* dest, void* src, unsigned long long n) {
+    unsigned char* d1 = dest;
+    unsigned char* s1 = src;
+    unsigned char* end = dest + n;
+
+    for (; d1 < end; d1++, s1++) {
+        *d1 = *s1;
+    }
+}
