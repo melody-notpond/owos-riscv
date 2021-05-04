@@ -109,6 +109,8 @@ typedef struct __attribute__((__packed__, aligned(2))) {
 
 ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block);
 
+void* ext2fs_load_block(generic_block_t* block, ext2fs_superblock_t* superblock, unsigned int block_id);
+
 ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* block, ext2fs_superblock_t* superblock);
 
 ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table);

@@ -25,6 +25,15 @@ ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block) {
     return superblock;
 }
 
+void* ext2fs_load_block(generic_block_t* block, ext2fs_superblock_t* superblock, unsigned int block_id) {
+    unsigned long long block_size = 1024 << superblock->log_block_size;
+    void* data = alloc((block_size + PAGE_SIZE - 1) / PAGE_SIZE);
+    unsigned long long sector = block_id * block_size / SECTOR_SIZE;
+    unsigned long long sector_count = (block_size + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    generic_block_read(block, data, sector, sector_count);
+    return data;
+}
+
 ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* block, ext2fs_superblock_t* superblock) {
     unsigned int table_size = superblock->blocks_count / superblock->blocks_per_group * sizeof(ext2fs_block_descriptor_t);
     unsigned int sector_count = (table_size + SECTOR_SIZE - 1) / SECTOR_SIZE;
@@ -37,13 +46,8 @@ ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* blo
 }
 
 ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table) {
-    unsigned long long block_size = 1024 << superblock->log_block_size;
     ext2fs_inode_t* root = alloc((superblock->inode_size + PAGE_SIZE - 1) / PAGE_SIZE);
-    void* buffer = alloc((block_size + PAGE_SIZE - 1) / PAGE_SIZE);
-    unsigned long long sector = desc_table[0].inode_table * block_size / SECTOR_SIZE;
-    unsigned long long sector_count = (block_size + SECTOR_SIZE - 1) / SECTOR_SIZE;
-
-    generic_block_read(block, buffer, sector, sector_count);
+    void* buffer = ext2fs_load_block(block, superblock, desc_table[0].inode_table);
 
     memcpy(root, buffer + superblock->inode_size, sizeof(ext2fs_inode_t));
 

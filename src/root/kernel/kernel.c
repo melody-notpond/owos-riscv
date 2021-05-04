@@ -12,6 +12,7 @@ void kmain() {
     uart_puts("Finished initialisation.\n");
 
     // Temporary block writing tests
+    /*
     uart_puts("Writing test data to block.\n");
     generic_block_write(root_block, "hewwo uwu aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0, 1);
     uart_puts("Wrote to block device.\n");
@@ -21,6 +22,7 @@ void kmain() {
     generic_block_read(root_block, data, 0, 1);
     uart_puts("Read data to memory: \n");
     uart_put_hexdump(data, 512);
+    */
 
     // File system stuff
     ext2fs_superblock_t* superblock = ext2_load_superblock(root_block);
@@ -34,6 +36,10 @@ void kmain() {
         uart_put_hex(root_inode->block[i]);
         uart_putc('\n');
     }
+
+    unsigned long long block_size = 1024 << superblock->log_block_size;
+    void* data_2 = ext2fs_load_block(root_block, superblock, root_inode->block[0]);
+    uart_put_hexdump(data_2, block_size);
 
     // Hang
     while (1) {
