@@ -1,6 +1,5 @@
 #include "ext2.h"
 #include "../memory.h"
-//#include "../virtio/block.h"
 #include "../uart.h"
 
 ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block) {
@@ -8,7 +7,6 @@ ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block) {
     ext2fs_superblock_t* superblock = alloc(page_num);
 
     generic_block_read(block, superblock, 2, (sizeof(ext2fs_superblock_t) + SECTOR_SIZE - 1) / SECTOR_SIZE);
-    uart_puts("uwu");
 
     if (superblock->magic != 0xef53) {
         uart_puts("ext2 filesystem not found.\n");

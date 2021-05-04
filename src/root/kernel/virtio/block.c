@@ -189,8 +189,8 @@ void virtio_block_make_generic(unsigned char block_id, generic_block_t** last_bl
     generic_block_t* last = *last_block;
     last->unpack_read = virtio_block_unpack_read;
     last->unpack_write = virtio_block_unpack_write;
+    last->used = 1;
     *(last->metadata) = block_id;
-    last->next = (((unsigned long long) last) / PAGE_SIZE < (((unsigned long long) last) + size) / PAGE_SIZE ? alloc(1) : last + size);
-    *last_block = last->next;
+    *last_block += size;
 }
 

@@ -5,8 +5,8 @@
 #include "virtio/virtio.h"
 #include "generic_block.h"
 
-generic_block_t* root_block;
-generic_block_t* last_block;
+generic_block_t root_block[128] = { 0 };
+generic_block_t* last_block = root_block;
 
 void kmain() {
     uart_puts("Finished initialisation.\n");
@@ -19,9 +19,8 @@ void kmain() {
     char data[513];
     data[512] = 0;
     generic_block_read(root_block, data, 0, 1);
-    uart_puts("Read data to memory: ");
-    uart_puts(data);
-    uart_putc('\n');
+    uart_puts("Read data to memory: \n");
+    uart_put_hexdump(data, 512);
 
     // File system stuff
     ext2fs_superblock_t* superblock = ext2_load_superblock(root_block);
@@ -47,10 +46,6 @@ void kinit() {
 
     // Initialise heap
     init_heap_metadata();
-
-    // Initialise generic block root
-    root_block = alloc(1);
-    last_block = root_block;
 
     // Probe for available virtio devices
     virtio_probe(&last_block);
