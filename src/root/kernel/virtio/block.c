@@ -185,7 +185,7 @@ char virtio_block_unpack_write(void* buffer, unsigned long long sector, unsigned
 }
 
 void virtio_block_make_generic(unsigned char block_id, generic_block_t** last_block) {
-    unsigned int size = sizeof(generic_block_t) + 1;
+    unsigned int size = sizeof(generic_block_t);
     generic_block_t* last = *last_block;
     last->unpack_read = virtio_block_unpack_read;
     last->unpack_write = virtio_block_unpack_write;

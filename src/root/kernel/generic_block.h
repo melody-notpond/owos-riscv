@@ -11,8 +11,8 @@ typedef struct s_generic_block {
     char (*unpack_read)(void*, unsigned long long, unsigned long long, unsigned char*);
     char (*unpack_write)(void*, unsigned long long, unsigned long long, unsigned char*);
     struct s_generic_block* next;
-    unsigned char metadata[];
-} generic_block_t;
+    unsigned char metadata[16];
+} __attribute__((__packed__, aligned(4))) generic_block_t;
 
 static inline char generic_block_read(generic_block_t* block, void* buffer, unsigned long long sector, unsigned long long sector_count) {
     return block->unpack_read(buffer, sector, sector_count, block->metadata);
