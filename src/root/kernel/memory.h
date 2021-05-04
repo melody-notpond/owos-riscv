@@ -15,7 +15,7 @@ void* alloc(unsigned long long page_count);
 // Deallocates a pointer allocated by alloc.
 void dealloc(void* ptr);
 
-void memcpy(void* dest, void* src, unsigned long long n);
+void* memcpy(void* dest, const void* src, unsigned long int n);
 
 #endif /* KERNEL_MEMORY_H */
 

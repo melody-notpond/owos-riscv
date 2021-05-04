@@ -103,12 +103,14 @@ void dealloc(void* ptr) {
     *cp = PAGE_ALLOC_BYTE_FREE;
 }
 
-void memcpy(void* dest, void* src, unsigned long long n) {
+void* memcpy(void* dest, const void* src, unsigned long int n) {
     unsigned char* d1 = dest;
-    unsigned char* s1 = src;
+    const unsigned char* s1 = src;
     unsigned char* end = dest + n;
 
     for (; d1 < end; d1++, s1++) {
         *d1 = *s1;
     }
+
+    return dest;
 }

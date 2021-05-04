@@ -3,31 +3,30 @@
 #include "uart.h"
 #include "virtio/block.h"
 #include "virtio/virtio.h"
+#include "generic_block.h"
+
+generic_block_t* root_block;
+generic_block_t* last_block;
 
 void kmain() {
     uart_puts("Finished initialisation.\n");
 
     // Temporary block writing tests
-    /*
-    volatile unsigned char status;
     uart_puts("Writing test data to block.\n");
-    virtio_block_write(7, 0, "hewwo uwu aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 1, &status);
-    while (status == 0xff);
+    generic_block_write(root_block, "hewwo uwu aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0, 1);
     uart_puts("Wrote to block device.\n");
     uart_puts("Reading test data from block\n");
     char data[513];
     data[512] = 0;
-    virtio_block_read(7, 0, data, 1, &status);
-    while (status == 0xff);
+    generic_block_read(root_block, data, 0, 1);
     uart_puts("Read data to memory: ");
     uart_puts(data);
     uart_putc('\n');
-    */
 
     // File system stuff
-    ext2fs_superblock_t* superblock = ext2_load_superblock();
-    ext2fs_block_descriptor_t* descriptor_table = ext2_load_block_descriptor_table(superblock);
-    ext2fs_inode_t* root_inode = ext2_get_root_inode(superblock, descriptor_table);
+    ext2fs_superblock_t* superblock = ext2_load_superblock(root_block);
+    ext2fs_block_descriptor_t* descriptor_table = ext2_load_block_descriptor_table(root_block, superblock);
+    ext2fs_inode_t* root_inode = ext2_get_root_inode(root_block, superblock, descriptor_table);
 
     uart_puts("Root inode has 0x");
     uart_put_hex(root_inode->blocks);
@@ -49,8 +48,12 @@ void kinit() {
     // Initialise heap
     init_heap_metadata();
 
+    // Initialise generic block root
+    root_block = alloc(1);
+    last_block = root_block;
+
     // Probe for available virtio devices
-    virtio_probe();
+    virtio_probe(&last_block);
 
     // Jump to interrupt init code
     asm("j interrupt_init");

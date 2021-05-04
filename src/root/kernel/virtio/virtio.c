@@ -3,11 +3,9 @@
 #include "../uart.h"
 #include "virtio.h"
 
-#define VIRTIO_MMIO_INTERVAL 0x1000
-#define VIRTIO_MMIO_TOP 0x010008000
 #define VIRTIO_MAGIC 0x74726976
 
-void virtio_probe() {
+void virtio_probe(generic_block_t** last_block) {
     volatile void* base = (void*) VIRTIO_MMIO_BASE;
 
     for (; (long long) base <= VIRTIO_MMIO_TOP; base += VIRTIO_MMIO_INTERVAL) {
@@ -32,10 +30,12 @@ void virtio_probe() {
                 break;
             case 0x02:
                 uart_puts("Device is a block device. Initialising...\n");
-                if (virtio_init_block_device(mmio))
+                if (virtio_init_block_device(mmio)) {
                     uart_puts("Failed to initialise block device\n");
-                else
+                } else {
                     uart_puts("Block device initialised successfully!\n");
+                    virtio_block_make_generic(((unsigned long long) base - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL - 1, last_block);
+                }
                 break;
             case 0x10:
                 uart_puts("Device is a graphics device. Initialising...\n");

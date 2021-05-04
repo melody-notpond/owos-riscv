@@ -77,8 +77,8 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     uart_puts(" sectors.\n");
 
     // Add block device
-    long long i = (((long long) mmio) - VIRTIO_MMIO_BASE) >> 12;
-    block_devices[i] = (virtio_block_device_t) {
+    long long i = (((long long) mmio) - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL;
+    block_devices[i - 1] = (virtio_block_device_t) {
         .queue = queue,
         .mmio = mmio,
         .config = config,
@@ -158,5 +158,39 @@ virtio_block_error_code_t virtio_block_read(unsigned char block_id, unsigned lon
 // Reads sectors from a block device and dumps them into the provided pointer. Status is set to 0xff and remains 0xff until the read is finished.
 virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long sector_count, volatile unsigned char* status) {
     return virtio_block_operation(VIRTIO_BLOCK_OPERATION_WRITE, block_id, sector, data, sector_count * 512, status);
+}
+
+char virtio_block_unpack_read(void* buffer, unsigned long long sector, unsigned long long sector_count, unsigned char* metadata) {
+    unsigned char status;
+    if (virtio_block_read(*metadata, sector, buffer, sector_count, &status)) {
+        while (status == 0xff);
+        if (status)
+            return -1;
+        else
+            return 0;
+    }
+    return -1;
+}
+
+char virtio_block_unpack_write(void* buffer, unsigned long long sector, unsigned long long sector_count, unsigned char* metadata) {
+    unsigned char status;
+    if (virtio_block_write(*metadata, sector, buffer, sector_count, &status)) {
+        while (status == 0xff);
+        if (status)
+            return -1;
+        else
+            return 0;
+    }
+    return -1;
+}
+
+void virtio_block_make_generic(unsigned char block_id, generic_block_t** last_block) {
+    unsigned int size = sizeof(generic_block_t) + 1;
+    generic_block_t* last = *last_block;
+    last->unpack_read = virtio_block_unpack_read;
+    last->unpack_write = virtio_block_unpack_write;
+    *(last->metadata) = block_id;
+    last->next = (((unsigned long long) last) / PAGE_SIZE < (((unsigned long long) last) + size) / PAGE_SIZE ? alloc(1) : last + size);
+    *last_block = last->next;
 }
 

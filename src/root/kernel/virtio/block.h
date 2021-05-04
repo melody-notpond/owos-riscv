@@ -1,10 +1,9 @@
 #ifndef KERNEL_VIRTIO_BLOCK_H
 #define KERNEL_VIRTIO_BLOCK_H
 
+#include "../generic_block.h"
 #include "virtio.h"
 #include "virtqueue.h"
-
-#define SECTOR_SIZE 512
 
 char virtio_init_block_device(volatile virtio_mmio_t* mmio);
 
@@ -23,6 +22,8 @@ virtio_block_error_code_t virtio_block_read(unsigned char block_id, unsigned lon
 // virtio_block_write(unsigned char, unsigned long long, void*, unsigned long long, volatile unsigned char*) -> virtio_block_error_code_t
 // Reads sectors from a block device and dumps them into the provided pointer. Status is set to 0xff and remains 0xff until the read is finished.
 virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long sector_count, volatile unsigned char* status);
+
+void virtio_block_make_generic(unsigned char block_id, generic_block_t** last_block);
 
 #endif /* KERNEL_VIRTIO_BLOCK_H */
 

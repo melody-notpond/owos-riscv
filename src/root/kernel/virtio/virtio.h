@@ -1,6 +1,8 @@
 #ifndef KERNEL_VIRTIO_H
 #define KERNEL_VIRTIO_H
 
+#include "../generic_block.h"
+
 #define VIRTIO_GENERIC_INIT(addr, device_features_do)                                                    \
     do {                                                                                                 \
         /* 1. Reset the device (set status register to zero) */                                          \
@@ -103,7 +105,7 @@ typedef struct __attribute__((__packed__, aligned(4))) {
 	volatile char config[];
 } virtio_mmio_t;
 
-void virtio_probe();
+void virtio_probe(generic_block_t** last_block);
 
 #endif /* KERNEL_VIRTIO_H */
 

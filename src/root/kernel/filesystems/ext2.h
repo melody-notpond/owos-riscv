@@ -1,5 +1,7 @@
-#ifndef KERNEL_FS_EXT2_GPU_H
-#define KERNEL_FS_EXT2_GPU_H
+#ifndef KERNEL_FS_EXT2_H
+#define KERNEL_FS_EXT2_H
+
+#include "../generic_block.h"
 
 typedef struct __attribute__((__packed__, aligned(1))) {
     unsigned int inodes_count;
@@ -105,11 +107,11 @@ typedef struct __attribute__((__packed__, aligned(2))) {
     unsigned char osd2[12];
 } ext2fs_inode_t;
 
-ext2fs_superblock_t* ext2_load_superblock();
+ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block);
 
-ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(ext2fs_superblock_t* superblock);
+ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* block, ext2fs_superblock_t* superblock);
 
-ext2fs_inode_t* ext2_get_root_inode(ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table);
+ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table);
 
-#endif /* KERNEL_FS_EXT2_GPU_H */
+#endif /* KERNEL_FS_EXT2_H */
 
