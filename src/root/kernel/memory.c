@@ -132,7 +132,7 @@ void* malloc(unsigned long int n) {
     unsigned long long size = n + sizeof(struct s_malloc_pointer_header);
     struct s_malloc_pointer_header* ptr = &heap_bottom;
 
-    while (ptr < (struct s_malloc_pointer_header*) &pages_bottom) {
+    while (ptr + size < (struct s_malloc_pointer_header*) &pages_bottom) {
         if (!ptr->used && (ptr->size == 0 || n <= ptr->size)) {
             if (ptr->size == 0)
                 ptr->size = n;
@@ -147,8 +147,12 @@ void* malloc(unsigned long int n) {
         else break;
     }
 
-    if (ptr >= (struct s_malloc_pointer_header*) &pages_bottom)
-        uart_puts("[malloc] Out of memory!\n");
+    if (ptr >= (struct s_malloc_pointer_header*) &pages_bottom) {
+        uart_puts("[malloc] Out of memory!\nAttempted to load address 0x");
+        uart_put_hex((unsigned long long) ptr);
+        uart_putc('\n');
+    }
+
 
     return (void*) 0;
 }

@@ -4,7 +4,7 @@ CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nost
 EMU=qemu-system-riscv64
 EFLAGS=-machine virt -m 256m -nographic -device virtio-blk-device,scsi=off,drive=foo -bios none -global virtio-mmio.force-legacy=false -device virtio-gpu-device # -serial stdio
 
-all: iso
+all: kernel #iso
 
 run:
 	$(EMU) $(EFLAGS) -kernel build/root/kernel -drive if=none,format=raw,file=build/drive.iso,id=foo

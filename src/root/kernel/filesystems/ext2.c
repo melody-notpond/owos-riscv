@@ -56,10 +56,10 @@ void* ext2fs_load_block(generic_block_t* block, ext2fs_superblock_t* superblock,
 ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* block, ext2fs_superblock_t* superblock) {
     // Allocate the table
     unsigned int table_size = (superblock->blocks_count + superblock->blocks_per_group - 1) / superblock->blocks_per_group * sizeof(ext2fs_block_descriptor_t);
-    ext2fs_block_descriptor_t* block_descriptor_table = malloc(table_size);
+    unsigned int sector_count = (table_size + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    ext2fs_block_descriptor_t* block_descriptor_table = malloc(sector_count * SECTOR_SIZE);
 
     // Read the table
-    unsigned int sector_count = (table_size + SECTOR_SIZE - 1) / SECTOR_SIZE;
     generic_block_read(block, block_descriptor_table, (1024 << superblock->log_block_size) / SECTOR_SIZE, sector_count);
 
     return block_descriptor_table;
@@ -74,11 +74,11 @@ ext2fs_inode_t* ext2_load_inode(generic_block_t* block, ext2fs_superblock_t* sup
     unsigned int desc_table_index = inode / superblock->inodes_per_group;
     unsigned int inode_table_offset = inode % superblock->inodes_per_group;
     unsigned long long block_size = 1024 << superblock->log_block_size;
-    unsigned long long block_id = (desc_table[desc_table_index].inode_table * block_size + inode * superblock->inode_size) / block_size;
+    unsigned long long block_id = (desc_table[desc_table_index].inode_table * block_size + inode_table_offset * superblock->inode_size) / block_size;
     void* buffer = ext2fs_load_block(block, superblock, block_id);
 
     // Copy
-    memcpy(root, buffer + superblock->inode_size * inode_table_offset, sizeof(ext2fs_inode_t));
+    memcpy(root, buffer + (superblock->inode_size * inode_table_offset) % block_size, superblock->inode_size);
 
     // Deallocate the buffer
     free(buffer);
