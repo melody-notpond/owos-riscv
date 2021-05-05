@@ -40,7 +40,8 @@ void kmain() {
     */
 
     unsigned long long block_size = 1024 << superblock->log_block_size;
-    void* data_2 = ext2fs_load_block(root_block, superblock, root_inode->block[0]);
+    void* data_2 = malloc(block_size);
+    ext2fs_load_block(root_block, superblock, root_inode->block[0], data_2);
     //uart_put_hexdump(data_2, block_size);
     free(data_2);
 
@@ -56,7 +57,8 @@ void kmain() {
             uart_putc('\n');
         }
 
-        void* data = ext2fs_load_block(root_block, superblock, inode->block[0]);
+        void* data = malloc(block_size);
+        ext2fs_load_block(root_block, superblock, inode->block[0], data);
         uart_put_hexdump(data, block_size);
     } else {
         uart_puts("File not found.\n");

@@ -176,6 +176,9 @@ void* realloc(void* ptr, unsigned long int n) {
 // free(void*) -> void
 // Frees a piece of memory allocated by malloc.
 void free(void* ptr) {
+    if (ptr == (void*) 0)
+        return;
+
     struct s_malloc_pointer_header* header = ptr - sizeof(struct s_malloc_pointer_header);
     if (header->used) {
         header->used = 0;
