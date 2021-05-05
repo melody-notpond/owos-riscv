@@ -107,12 +107,19 @@ typedef struct __attribute__((__packed__, aligned(2))) {
     unsigned char osd2[12];
 } ext2fs_inode_t;
 
+// ext2_load_superblock(generic_block_t*) -> ext2fs_superblock_t*
+// Loads a superblock from a block device.
 ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block);
 
+// Temporarily public
 void* ext2fs_load_block(generic_block_t* block, ext2fs_superblock_t* superblock, unsigned int block_id);
 
+// ext2_load_block_descriptor_table(generic_block_t*, ext2fs_superblock_t*) -> ext2fs_block_descriptor_t*
+// Loads a descriptor table from an ext2 file system.
 ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* block, ext2fs_superblock_t* superblock);
 
+// ext2_get_root_inode(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*) -> ext2fs_inode_t*
+// Loads the root inode from an ext2 file system.
 ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table);
 
 #endif /* KERNEL_FS_EXT2_H */

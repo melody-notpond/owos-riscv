@@ -14,10 +14,14 @@ typedef struct s_generic_block {
     unsigned char metadata[15];
 } __attribute__((__packed__, aligned(4))) generic_block_t;
 
+// generic_block_read(generic_block_t*, void*, unsigned long long, unsigned long long) -> char
+// Reads sectors from a block device.
 static inline char generic_block_read(generic_block_t* block, void* buffer, unsigned long long sector, unsigned long long sector_count) {
     return block->unpack_read(buffer, sector, sector_count, block->metadata);
 }
 
+// generic_block_read(generic_block_t*, void*, unsigned long long, unsigned long long) -> char
+// Writes sectors to a block device.
 static inline char generic_block_write(generic_block_t* block, void* buffer, unsigned long long sector, unsigned long long sector_count) {
     return block->unpack_write(buffer, sector, sector_count, block->metadata);
 }

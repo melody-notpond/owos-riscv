@@ -27,16 +27,22 @@ void init_heap_metadata() {
     }
 }
 
+// is_free(page_t*) -> char
+// Checks if a page is free. Returns true if free.
 char is_free(page_t* ptr) {
     char* cp = ((char*) &heap_bottom) + (((char*) ptr) - (char*) heap_start) / PAGE_SIZE;
     return *cp == PAGE_ALLOC_BYTE_FREE;
 }
 
+// is_used(page_t*) -> char
+// Checks if a page is used. Returns true if used.
 char is_used(page_t* ptr) {
     char* cp = ((char*) &heap_bottom) + (((char*) ptr) - (char*) heap_start) / PAGE_SIZE;
     return *cp != PAGE_ALLOC_BYTE_FREE;
 }
 
+// is_last(page_t*) -> char
+// Checks if a page is the last page in an allocation. Returns true if that is the case.
 char is_last(page_t* ptr) {
     char* cp = ((char*) &heap_bottom) + (((char*) ptr) - (char*) heap_start) / PAGE_SIZE;
     return (*cp & PAGE_ALLOC_BYTE_LAST) != 0;
@@ -92,17 +98,21 @@ void* alloc(unsigned long long page_count) {
 // Deallocates a pointer allocated by alloc.
 void dealloc(void* ptr) {
     page_t* page_ptr = (page_t*) ptr;
-
     char* cp = ((char*) &heap_bottom) + (((char*) page_ptr) - (char*) heap_start) / PAGE_SIZE;
+
     while (!is_last(page_ptr)) {
         // Mark pages as free
         *cp = PAGE_ALLOC_BYTE_FREE;
         page_ptr++;
         cp++;
     }
+
+    // Mark last page as free
     *cp = PAGE_ALLOC_BYTE_FREE;
 }
 
+// memcpy(void*, const void*, unsigned long int) -> void*
+// Copys the data from one pointer to another.
 void* memcpy(void* dest, const void* src, unsigned long int n) {
     unsigned char* d1 = dest;
     const unsigned char* s1 = src;
