@@ -16,8 +16,14 @@ SECTIONS
   . = ALIGN(16);
   stack_top = .;
 
-  . = ALIGN(4096);
+  /* Heap */
+  . = ALIGN(8);
   PROVIDE(heap_bottom = .);
+  . += 0x800000;
+
+  /* Pages */
+  . = ALIGN(4096);
+  PROVIDE(pages_bottom = .);
 
   /* End of uninitalized data segement */
 }

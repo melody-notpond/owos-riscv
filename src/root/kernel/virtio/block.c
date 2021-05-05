@@ -52,7 +52,7 @@ void virtio_block_mei_handler(unsigned int mei_id) {
         while (1) {
             // The first chunk of each descriptor is the request header, which is allocated as a 4 KiB page
             unsigned short id = device->queue->used->ring[device->queue->last_seen_used].id;
-            dealloc((void*) device->queue->desc[id].addr);
+            free((void*) device->queue->desc[id].addr);
 
             device->queue->last_seen_used++;
 
@@ -66,7 +66,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     char ro;
     VIRTIO_GENERIC_INIT(mmio, ro = (features & (1 << 5)) != 0;);
 
-    volatile virtio_queue_t* queue = virtqueue_add_to_device(mmio);
+    volatile virtio_queue_t* queue = virtqueue_add_to_device(mmio, 0);
     if (queue == 0)
         return -1;
 
@@ -119,7 +119,7 @@ virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, un
     }
 
     // Allocate request
-    virtio_block_request_t* request = alloc(1);
+    virtio_block_request_t* request = malloc(sizeof(virtio_block_request_t));
     *request = (virtio_block_request_t) {
         .type = rw == VIRTIO_BLOCK_OPERATION_WRITE ? VIRTIO_BLOCK_REQUEST_TYPE_OUT : VIRTIO_BLOCK_REQUEST_TYPE_IN,
         .sector = sector

@@ -43,9 +43,9 @@ typedef struct __attribute__((__packed__, aligned(1))) {
     volatile virtio_used_t* used;
 } virtio_queue_t;
 
-// virtqueue_add_to_device(volatile virtio_mmio_t* mmio) -> volatile virtio_queue_t*
+// virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int) -> volatile virtio_queue_t*
 // Adds a virtqueue to a device.
-volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio);
+volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int queue_sel);
 
 #endif /* KERNEL_VIRTQUEUE_H */
 

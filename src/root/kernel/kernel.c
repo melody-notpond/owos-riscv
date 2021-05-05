@@ -39,7 +39,7 @@ void kmain() {
 
     unsigned long long block_size = 1024 << superblock->log_block_size;
     void* data_2 = ext2fs_load_block(root_block, superblock, root_inode->block[0]);
-    uart_put_hexdump(data_2, block_size);
+    // uart_put_hexdump(data_2, block_size);
 
     // Hang
     while (1) {

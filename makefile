@@ -2,7 +2,7 @@ CODE=src/root/
 CC=riscv64-unknown-elf-gcc
 CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld -g
 EMU=qemu-system-riscv64
-EFLAGS=-machine virt -nographic -m 256m -device virtio-blk-device,scsi=off,drive=foo -bios none -global virtio-mmio.force-legacy=false -device virtio-gpu-device
+EFLAGS=-machine virt -m 256m -nographic -device virtio-blk-device,scsi=off,drive=foo -bios none -global virtio-mmio.force-legacy=false -device virtio-gpu-device # -serial stdio
 
 all: iso
 

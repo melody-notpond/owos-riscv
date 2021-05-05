@@ -2,9 +2,9 @@
 #include "../uart.h"
 #include "virtqueue.h"
 
-// virtqueue_add_to_device(volatile virtio_mmio_t* mmio) -> volatile virtio_queue_t*
+// virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int) -> volatile virtio_queue_t*
 // Adds a virtqueue to a device.
-volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio) {
+volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int queue_sel) {
     // Check queue size
     unsigned int queue_num_max = mmio->queue_num_max;
 
@@ -15,13 +15,10 @@ volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio) {
     }
 
     // Select queue
-    mmio->queue_sel = 0;
+    mmio->queue_sel = queue_sel;
 
     // Set queue size
     mmio->queue_num = VIRTIO_RING_SIZE;
-
-    // Create block device queue
-    unsigned long long page_count = (sizeof(virtio_queue_t) + VIRTIO_RING_SIZE * sizeof(virtio_descriptor_t) + sizeof(virtio_available_t) + sizeof(virtio_used_t) + PAGE_SIZE - 1) / PAGE_SIZE;
 
     // Check that queue is not in use
     if (mmio->queue_ready) {
@@ -30,7 +27,7 @@ volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio) {
     }
 
     // Allocate queue
-    volatile virtio_queue_t* queue = alloc(page_count);
+    volatile virtio_queue_t* queue = malloc(sizeof(virtio_queue_t) + VIRTIO_RING_SIZE * sizeof(virtio_descriptor_t) + sizeof(virtio_available_t) + sizeof(virtio_used_t));
     void* ptr = (void*) queue;
     queue->num = 0;
     queue->last_seen_used = 0;
