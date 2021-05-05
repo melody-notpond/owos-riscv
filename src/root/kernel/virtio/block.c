@@ -49,15 +49,9 @@ void virtio_block_mei_handler(unsigned int mei_id) {
 
     if (status == VIRTIO_INTERRUPT_USED_RING_UPDATE) {
         // Free memory that is no longer used
-        while (1) {
-            // The first chunk of each descriptor is the request header, which is allocated as a 4 KiB page
-            unsigned short id = device->queue->used->ring[device->queue->last_seen_used].id;
-            free((void*) device->queue->desc[id].addr);
-
-            device->queue->last_seen_used++;
-
-            if (device->queue->last_seen_used == device->queue->used->idx)
-                break;
+        void* p;
+        while ((p = (void*) virtqueue_pop_used(device->queue))) {
+            free(p);
         }
     }
 }
@@ -126,23 +120,33 @@ virtio_block_error_code_t virtio_block_operation(virtio_block_operation_t rw, un
     };
     virtio_block_device_t* device = &block_devices[block_id];
 
-    device->queue->desc[device->queue->num].addr = request;
-    device->queue->desc[device->queue->num].flags = VIRTIO_DESCRIPTOR_FLAG_NEXT;
-    device->queue->desc[device->queue->num].length = sizeof(virtio_block_request_t);
-    device->queue->desc[device->queue->num].next = device->queue->num + 1;
-    device->queue->desc[device->queue->num + 1].addr = data;
-    device->queue->desc[device->queue->num + 1].flags = VIRTIO_DESCRIPTOR_FLAG_NEXT | (rw == VIRTIO_BLOCK_OPERATION_READ ? VIRTIO_DESCRIPTOR_FLAG_WRITE_ONLY : 0);
-    device->queue->desc[device->queue->num + 1].length = size;
-    device->queue->desc[device->queue->num + 1].next = device->queue->num + 2;
-    device->queue->desc[device->queue->num + 2].addr = status;
-    device->queue->desc[device->queue->num + 2].flags = VIRTIO_DESCRIPTOR_FLAG_WRITE_ONLY;
-    device->queue->desc[device->queue->num + 2].length = 1;
-    device->queue->desc[device->queue->num + 2].next = 0;
+    // Set descriptors
+    unsigned short d1, d2, d3;
+    *virtqueue_push_descriptor(device->queue, &d3) = (virtio_descriptor_t) {
+        .addr = status,
+        .flags = VIRTIO_DESCRIPTOR_FLAG_WRITE_ONLY,
+        .length = 1,
+        .next = 0
+    };
 
-    device->queue->available->ring[device->queue->available->idx] = device->queue->num;
-    device->queue->num += 3;
-    device->queue->available->idx++;
+    *virtqueue_push_descriptor(device->queue, &d2) = (virtio_descriptor_t) {
+        .addr = data,
+        .flags = VIRTIO_DESCRIPTOR_FLAG_NEXT | (rw == VIRTIO_BLOCK_OPERATION_READ ? VIRTIO_DESCRIPTOR_FLAG_WRITE_ONLY : 0),
+        .length = size,
+        .next = d3
+    };
 
+    *virtqueue_push_descriptor(device->queue, &d1) = (virtio_descriptor_t) {
+        .addr = request,
+        .flags = VIRTIO_DESCRIPTOR_FLAG_NEXT,
+        .length = sizeof(virtio_block_request_t),
+        .next = d2
+    };
+
+    // Set available
+    virtqueue_push_available(device->queue, d1);
+
+    // Notify the device of new entries on the queue
     device->mmio->queue_notify = 0;
 
     return VIRTIO_BLOCK_ERROR_CODE_SUCCESS;

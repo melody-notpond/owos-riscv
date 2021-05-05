@@ -47,5 +47,17 @@ typedef struct __attribute__((__packed__, aligned(1))) {
 // Adds a virtqueue to a device.
 volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int queue_sel);
 
+// virtqueue_push_descriptor(volatile virtio_queue_t*, unsigned short*) -> volatile virtio_descriptor_t*
+// Pushes a descriptor to a queue.
+volatile virtio_descriptor_t* virtqueue_push_descriptor(volatile virtio_queue_t* queue, unsigned short* desc_index);
+
+// virtqueue_push_available(volatile virtio_queue_t*, unsigned short) -> void
+// Pushes an available descriptor to a queue.
+void virtqueue_push_available(volatile virtio_queue_t* queue, unsigned short desc);
+
+// virtqueue_pop_used(volatile virtio_queue_t*) -> volatile virtio_descriptor_t*
+// Pops a used descriptor from a queue.
+volatile virtio_descriptor_t* virtqueue_pop_used(volatile virtio_queue_t* queue);
+
 #endif /* KERNEL_VIRTQUEUE_H */
 
