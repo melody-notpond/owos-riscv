@@ -126,5 +126,9 @@ ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t*
 // Fetches an inode from a directory.
 ext2fs_inode_t* ext2_fetch_from_directory(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* dir, char* file);
 
+// ext2_get_inode(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*, ext2fs_inode_t*, char**, unsigned long long) -> ext2fs_inode_t*
+// Gets an inode by walking the path from the root inode.
+ext2fs_inode_t* ext2_get_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* root, char** path, unsigned long long path_node_count);
+
 #endif /* KERNEL_FS_EXT2_H */
 

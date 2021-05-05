@@ -41,9 +41,12 @@ void kmain() {
 
     unsigned long long block_size = 1024 << superblock->log_block_size;
     void* data_2 = ext2fs_load_block(root_block, superblock, root_inode->block[0]);
-    uart_put_hexdump(data_2, block_size);
+    //uart_put_hexdump(data_2, block_size);
+    free(data_2);
 
-    ext2fs_inode_t* inode = ext2_fetch_from_directory(root_block, superblock, descriptor_table, root_inode, "uwu");
+    char* path[] = {"uwu", "nya", "owo"};
+    ext2fs_inode_t* inode = ext2_get_inode(root_block, superblock, descriptor_table, root_inode, path, 3);
+
     if (inode != (void*) 0) {
         uart_puts("\n\nFile found!\nFile inode has 0x");
         uart_put_hex(inode->blocks);

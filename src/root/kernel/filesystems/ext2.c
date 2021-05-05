@@ -60,7 +60,7 @@ ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* blo
     ext2fs_block_descriptor_t* block_descriptor_table = malloc(sector_count * SECTOR_SIZE);
 
     // Read the table
-    generic_block_read(block, block_descriptor_table, (1024 << superblock->log_block_size) / SECTOR_SIZE, sector_count);
+    generic_block_read(block, block_descriptor_table, (1024 << superblock->log_block_size) * (superblock->first_data_block + 1) / SECTOR_SIZE, sector_count);
 
     return block_descriptor_table;
 }
@@ -69,16 +69,18 @@ ext2fs_inode_t* ext2_load_inode(generic_block_t* block, ext2fs_superblock_t* sup
     // Inodes are one indexed because uhhhhh idk whyyyyyyyyyy :(
     inode--;
 
-    // Allocate the inode and load the block in memory
+    // Allocate the inode
     ext2fs_inode_t* root = malloc(superblock->inode_size);
-    unsigned int desc_table_index = inode / superblock->inodes_per_group;
-    unsigned int inode_table_offset = inode % superblock->inodes_per_group;
+
+    // Load block to memory
+    unsigned int group = inode / superblock->inodes_per_group;
+    unsigned int inode_index = inode % superblock->inodes_per_group;
     unsigned long long block_size = 1024 << superblock->log_block_size;
-    unsigned long long block_id = (desc_table[desc_table_index].inode_table * block_size + inode_table_offset * superblock->inode_size) / block_size;
+    unsigned long long block_id = desc_table[group].inode_table + inode_index * superblock->inode_size / block_size;
     void* buffer = ext2fs_load_block(block, superblock, block_id);
 
     // Copy
-    memcpy(root, buffer + (superblock->inode_size * inode_table_offset) % block_size, superblock->inode_size);
+    memcpy(root, buffer + (superblock->inode_size * inode_index) % block_size, superblock->inode_size);
 
     // Deallocate the buffer
     free(buffer);
@@ -91,7 +93,7 @@ ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t*
     return ext2_load_inode(block, superblock, desc_table, 2);
 }
 
-struct s_dir_listing {
+struct __attribute__((__packed__, aligned(1))) s_dir_listing {
     unsigned int inode;
     unsigned short rec_len;
     unsigned char name_len;
@@ -109,36 +111,41 @@ ext2fs_inode_t* ext2_fetch_from_directory(generic_block_t* block, ext2fs_superbl
             continue;
 
         void* data = ext2fs_load_block(block, superblock, block_id);
-        // uart_put_hexdump(data, 1024 << superblock->log_block_size);
 
         struct s_dir_listing* p = data;
-        while (p < (struct s_dir_listing*) (data + block_size)) {
+        struct s_dir_listing* end = (struct s_dir_listing*) (((void*) data) + block_size);
+
+        for (; p < end; p = p->rec_len ? ((void*) p) + p->rec_len : p + 1) {
             // Compare string
             char name[p->name_len + 1];
             name[p->name_len] = 0;
             memcpy(name, p->name, p->name_len);
             if (!strcmp(name, file))
                 return ext2_load_inode(block, superblock, desc_table, p->inode);
-
-            // Get next entry
-            unsigned char name_len = p->name_len;
-            p = ((void*) (p + 1)) + name_len;
-
-            // Padding
-            p = (struct s_dir_listing*) (((unsigned long long) (((void*) p) + 3)) & ~3);
         }
 
         free(data);
     }
+
     // TODO: indirect blocks
     return 0;
 }
 
+// ext2_get_inode(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*, ext2fs_inode_t*, char**, unsigned long long) -> ext2fs_inode_t*
+// Gets an inode by walking the path from the root inode.
 ext2fs_inode_t* ext2_get_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* root, char** path, unsigned long long path_node_count) {
     ext2fs_inode_t* node = root;
     for (unsigned long long i = 0; i < path_node_count; i++) {
         char* path_node = path[i];
+        ext2fs_inode_t* n = ext2_fetch_from_directory(block, superblock, desc_table, node, path_node);
 
+        if (node != root)
+            free(node);
+
+        node = n;
+
+        if (node == (void*) 0)
+            return (void*) 0;
     }
 
     return node;

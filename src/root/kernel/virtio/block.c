@@ -161,8 +161,8 @@ virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned lo
 }
 
 char virtio_block_unpack_read(void* buffer, unsigned long long sector, unsigned long long sector_count, unsigned char* metadata) {
-    unsigned char status;
-    if (virtio_block_read(*metadata, sector, buffer, sector_count, &status)) {
+    volatile unsigned char status = 0xff;
+    if (!virtio_block_read(*metadata, sector, buffer, sector_count, &status)) {
         while (status == 0xff);
         if (status)
             return -1;
@@ -173,8 +173,8 @@ char virtio_block_unpack_read(void* buffer, unsigned long long sector, unsigned 
 }
 
 char virtio_block_unpack_write(void* buffer, unsigned long long sector, unsigned long long sector_count, unsigned char* metadata) {
-    unsigned char status;
-    if (virtio_block_write(*metadata, sector, buffer, sector_count, &status)) {
+    volatile unsigned char status = 0xff;
+    if (!virtio_block_write(*metadata, sector, buffer, sector_count, &status)) {
         while (status == 0xff);
         if (status)
             return -1;
