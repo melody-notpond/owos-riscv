@@ -29,6 +29,7 @@ void kmain() {
     ext2fs_block_descriptor_t* descriptor_table = ext2_load_block_descriptor_table(root_block, superblock);
     ext2fs_inode_t* root_inode = ext2_get_root_inode(root_block, superblock, descriptor_table);
 
+    /*
     uart_puts("Root inode has 0x");
     uart_put_hex(root_inode->blocks);
     uart_puts(" entries.\nRoot inode entries:\n");
@@ -36,10 +37,20 @@ void kmain() {
         uart_put_hex(root_inode->block[i]);
         uart_putc('\n');
     }
+    */
 
     unsigned long long block_size = 1024 << superblock->log_block_size;
     void* data_2 = ext2fs_load_block(root_block, superblock, root_inode->block[0]);
-    // uart_put_hexdump(data_2, block_size);
+    uart_put_hexdump(data_2, block_size);
+
+    ext2fs_inode_t* inode = ext2_fetch_from_directory(root_block, superblock, descriptor_table, root_inode, "lost+found");
+    if (inode != (void*) 0) {
+        uart_puts("\n\nFile found!\n");
+        void* data = ext2fs_load_block(root_block, superblock, inode->block[0]);
+        uart_put_hexdump(data, block_size);
+    } else {
+        uart_puts("File not found.\n");
+    }
 
     // Hang
     while (1) {

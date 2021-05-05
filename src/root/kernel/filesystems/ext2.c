@@ -1,6 +1,12 @@
 #include "ext2.h"
 #include "../memory.h"
+#include "../string.h"
 #include "../uart.h"
+
+#define INODE_DIRECT_COUNT 12
+#define INODE_SINGLE_INDIRECT 12
+#define INODE_DOUBLE_INDIRECT 13
+#define INODE_TRIPLE_INDIRECT 14
 
 // ext2_load_superblock(generic_block_t*) -> ext2fs_superblock_t*
 // Loads a superblock from a block device.
@@ -59,19 +65,82 @@ ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* blo
     return block_descriptor_table;
 }
 
-// ext2_get_root_inode(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*) -> ext2fs_inode_t*
-// Loads the root inode from an ext2 file system.
-ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table) {
+ext2fs_inode_t* ext2_load_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, unsigned int inode) {
+    // Inodes are one indexed because uhhhhh idk whyyyyyyyyyy :(
+    inode--;
+
     // Allocate the inode and load the block in memory
     ext2fs_inode_t* root = malloc(superblock->inode_size);
-    void* buffer = ext2fs_load_block(block, superblock, desc_table[0].inode_table);
+    unsigned int desc_table_index = inode / superblock->inodes_per_group;
+    unsigned int inode_table_offset = inode % superblock->inodes_per_group;
+    unsigned long long block_size = 1024 << superblock->log_block_size;
+    unsigned long long block_id = (desc_table[desc_table_index].inode_table * block_size + inode * superblock->inode_size) / block_size;
+    void* buffer = ext2fs_load_block(block, superblock, block_id);
 
     // Copy
-    memcpy(root, buffer + superblock->inode_size, sizeof(ext2fs_inode_t));
+    memcpy(root, buffer + superblock->inode_size * inode_table_offset, sizeof(ext2fs_inode_t));
 
     // Deallocate the buffer
     free(buffer);
     return root;
 }
 
+// ext2_get_root_inode(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*) -> ext2fs_inode_t*
+// Loads the root inode from an ext2 file system.
+ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table) {
+    return ext2_load_inode(block, superblock, desc_table, 2);
+}
+
+struct s_dir_listing {
+    unsigned int inode;
+    unsigned short rec_len;
+    unsigned char name_len;
+    unsigned char file_type;
+    char name[];
+};
+
+// ext2_fetch_from_directory(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
+// Fetches an inode from a directory.
+ext2fs_inode_t* ext2_fetch_from_directory(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* dir, char* file) {
+    unsigned long long block_size = 1024 << superblock->log_block_size;
+    for (int i = 0; i < INODE_DIRECT_COUNT; i++) {
+        unsigned int block_id = dir->block[i];
+        if (block_id == 0)
+            continue;
+
+        void* data = ext2fs_load_block(block, superblock, block_id);
+        // uart_put_hexdump(data, 1024 << superblock->log_block_size);
+
+        struct s_dir_listing* p = data;
+        while (p < (struct s_dir_listing*) (data + block_size)) {
+            // Compare string
+            char name[p->name_len + 1];
+            name[p->name_len] = 0;
+            memcpy(name, p->name, p->name_len);
+            if (!strcmp(name, file))
+                return ext2_load_inode(block, superblock, desc_table, p->inode);
+
+            // Get next entry
+            unsigned char name_len = p->name_len;
+            p = ((void*) (p + 1)) + name_len;
+
+            // Padding
+            p = (struct s_dir_listing*) (((unsigned long long) (((void*) p) + 3)) & ~3);
+        }
+
+        free(data);
+    }
+    // TODO: indirect blocks
+    return 0;
+}
+
+ext2fs_inode_t* ext2_get_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* root, char** path, unsigned long long path_node_count) {
+    ext2fs_inode_t* node = root;
+    for (unsigned long long i = 0; i < path_node_count; i++) {
+        char* path_node = path[i];
+
+    }
+
+    return node;
+}
 

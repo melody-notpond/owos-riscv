@@ -4,6 +4,13 @@
 // TODO: figure out how to make this dependent on how much memory is detected
 #define HEAP_SIZE 0x100000
 
+// Header for malloc allocations.
+struct s_malloc_pointer_header {
+    unsigned long long size;
+    struct s_malloc_pointer_header* next;
+    unsigned char used;
+};
+
 // Represents a page.
 typedef unsigned char page_t[PAGE_SIZE];
 
@@ -146,6 +153,22 @@ void* malloc(unsigned long int n) {
     return (void*) 0;
 }
 
+// realloc(void*, unsigned long int) -> void*
+// Reallocates a piece of memory, returning the new pointer.
+void* realloc(void* ptr, unsigned long int n) {
+    struct s_malloc_pointer_header* header = ptr - sizeof(struct s_malloc_pointer_header);
+    if (header->size >= n)
+        return ptr;
+
+    void* new = malloc(n);
+    if (new == (void*) 0)
+        return new;
+
+    memcpy(new, ptr, header->size);
+    free(ptr);
+    return new;
+}
+
 // free(void*) -> void
 // Frees a piece of memory allocated by malloc.
 void free(void* ptr) {
@@ -153,6 +176,12 @@ void free(void* ptr) {
     if (header->used) {
         header->used = 0;
     }
+}
+
+// _sizeof(void*) -> unsigned long long
+// Returns the size of a pointer allocated by malloc.
+unsigned long long _sizeof(void* ptr) {
+    return (((struct s_malloc_pointer_header*) ptr) - 1)->size;
 }
 
 // memcpy(void*, const void*, unsigned long int) -> void*

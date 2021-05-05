@@ -122,5 +122,9 @@ ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* blo
 // Loads the root inode from an ext2 file system.
 ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table);
 
+// ext2_fetch_from_directory(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
+// Fetches an inode from a directory.
+ext2fs_inode_t* ext2_fetch_from_directory(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* dir, char* file);
+
 #endif /* KERNEL_FS_EXT2_H */
 
