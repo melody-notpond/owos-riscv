@@ -11,55 +11,26 @@ generic_block_t* last_block = root_block;
 void kmain() {
     uart_puts("Finished initialisation.\n");
 
-    // Temporary block writing tests
-    /*
-    uart_puts("Writing test data to block.\n");
-    generic_block_write(root_block, "hewwo uwu aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 0, 1);
-    uart_puts("Wrote to block device.\n");
-    uart_puts("Reading test data from block\n");
-    char data[513];
-    data[512] = 0;
-    generic_block_read(root_block, data, 0, 1);
-    uart_puts("Read data to memory: \n");
-    uart_put_hexdump(data, 512);
-    */
+    // Mount root file system
+    ext2fs_mount_t mount = ext2_mount(root_block);
+    if (mount.root_inode != (void*) 0)
+        uart_puts("Mounted root file system\n");
 
-    // File system stuff
-    ext2fs_superblock_t* superblock = ext2_load_superblock(root_block);
-    ext2fs_block_descriptor_t* descriptor_table = ext2_load_block_descriptor_table(root_block, superblock);
-    ext2fs_inode_t* root_inode = ext2_get_root_inode(root_block, superblock, descriptor_table);
-
-    /*
-    uart_puts("Root inode has 0x");
-    uart_put_hex(root_inode->blocks);
-    uart_puts(" entries.\nRoot inode entries:\n");
-    for (int i = 0; i < 15; i++) {
-        uart_put_hex(root_inode->block[i]);
-        uart_putc('\n');
-    }
-    */
-
-    unsigned long long block_size = 1024 << superblock->log_block_size;
-    void* data_2 = malloc(block_size);
-    ext2fs_load_block(root_block, superblock, root_inode->block[0], data_2);
-    //uart_put_hexdump(data_2, block_size);
-    free(data_2);
-
+    // Get test file
+    unsigned long long block_size = 1024 << mount.superblock->log_block_size;
     char* path[] = {"uwu", "nya", "owo"};
-    ext2fs_inode_t* inode = ext2_get_inode(root_block, superblock, descriptor_table, root_inode, path, 3);
+    ext2fs_inode_t* inode = ext2_get_inode(&mount, mount.root_inode, path, 3);
 
     if (inode != (void*) 0) {
-        uart_puts("\n\nFile found!\nFile inode has 0x");
-        uart_put_hex(inode->blocks);
-        uart_puts(" entries.\nInode entries:\n");
+        uart_puts("File found!\nInode entries:\n");
         for (int i = 0; i < 15; i++) {
             uart_put_hex(inode->block[i]);
             uart_putc('\n');
         }
 
         void* data = malloc(block_size);
-        ext2fs_load_block(root_block, superblock, inode->block[0], data);
-        uart_put_hexdump(data, block_size);
+        ext2fs_load_block(root_block, mount.superblock, inode->block[0], data);
+        uart_put_hexdump(data, 32);
     } else {
         uart_puts("File not found.\n");
     }

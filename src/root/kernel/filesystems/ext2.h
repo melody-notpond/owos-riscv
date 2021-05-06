@@ -81,6 +81,16 @@ typedef struct __attribute__((__packed__, aligned(2))) {
     unsigned char rsv1[14];
 } ext2fs_block_descriptor_t;
 
+enum {
+    INODE_FILE_SOCKET   = 0xc000,
+    INODE_FILE_SYMLINK  = 0xa000,
+    INODE_FILE_REGULAR  = 0x8000,
+    INODE_FILE_BLOCK    = 0x6000,
+    INODE_FILE_DIR      = 0x4000,
+    INODE_FILE_CHAR     = 0x2000,
+    INODE_FILE_FIFO     = 0x1000,
+};
+
 typedef struct __attribute__((__packed__, aligned(2))) {
     unsigned short mode;
     unsigned short uid;
@@ -107,28 +117,27 @@ typedef struct __attribute__((__packed__, aligned(2))) {
     unsigned char osd2[12];
 } ext2fs_inode_t;
 
-// ext2_load_superblock(generic_block_t*) -> ext2fs_superblock_t*
-// Loads a superblock from a block device.
-ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block);
+typedef struct {
+    generic_block_t* block;
+    ext2fs_superblock_t* superblock;
+    ext2fs_block_descriptor_t* desc_table;
+    ext2fs_inode_t* root_inode;
+} ext2fs_mount_t;
+
+// ext2_mount(generic_block_t*) -> ext2fs_mount_t
+// Mounts an ext2 file system from a generic block device.
+ext2fs_mount_t ext2_mount(generic_block_t* block);
 
 // Temporarily public
 void ext2fs_load_block(generic_block_t* block, ext2fs_superblock_t* superblock, unsigned int block_id, void* data);
 
-// ext2_load_block_descriptor_table(generic_block_t*, ext2fs_superblock_t*) -> ext2fs_block_descriptor_t*
-// Loads a descriptor table from an ext2 file system.
-ext2fs_block_descriptor_t* ext2_load_block_descriptor_table(generic_block_t* block, ext2fs_superblock_t* superblock);
-
-// ext2_get_root_inode(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*) -> ext2fs_inode_t*
-// Loads the root inode from an ext2 file system.
-ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table);
-
-// ext2_fetch_from_directory(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
+// ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
 // Fetches an inode from a directory.
-ext2fs_inode_t* ext2_fetch_from_directory(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* dir, char* file);
+ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file);
 
-// ext2_get_inode(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*, ext2fs_inode_t*, char**, unsigned long long) -> ext2fs_inode_t*
+// ext2_get_inode(ext2fs_mount_t*, ext2fs_inode_t*, char**, unsigned long long) -> ext2fs_inode_t*
 // Gets an inode by walking the path from the root inode.
-ext2fs_inode_t* ext2_get_inode(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* root, char** path, unsigned long long path_node_count);
+ext2fs_inode_t* ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char** path, unsigned long long path_node_count);
 
 #endif /* KERNEL_FS_EXT2_H */
 
