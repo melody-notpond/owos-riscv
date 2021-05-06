@@ -155,26 +155,20 @@ struct __attribute__((__packed__, aligned(1))) s_dir_listing {
     char name[];
 };
 
-ext2fs_inode_t* ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file, void* data, unsigned long long block_size) {
-    for (int i = 0; i < INODE_DIRECT_COUNT; i++) {
-        unsigned int block_id = dir->block[i];
-        if (block_id == 0)
-            return (void*) 0;
+ext2fs_inode_t* ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file, void* data, unsigned long long block_size, unsigned int block_id) {
+    // Get directory listing from block
+    ext2fs_load_block(mount->block, mount->superblock, block_id, data);
+    struct s_dir_listing* p = data;
+    struct s_dir_listing* end = (struct s_dir_listing*) (((void*) data) + block_size);
 
-        // Get directory listing from block
-        ext2fs_load_block(mount->block, mount->superblock, block_id, data);
-        struct s_dir_listing* p = data;
-        struct s_dir_listing* end = (struct s_dir_listing*) (((void*) data) + block_size);
-
-        // Iterate over directory listings
-        for (; p < end; p = p->rec_len ? ((void*) p) + p->rec_len : p + 1) {
-            // Compare string
-            char name[p->name_len + 1];
-            name[p->name_len] = 0;
-            memcpy(name, p->name, p->name_len);
-            if (!strcmp(name, file))
-                return ext2_load_inode(mount, p->inode);
-        }
+    // Iterate over directory listings
+    for (; p < end; p = p->rec_len ? ((void*) p) + p->rec_len : p + 1) {
+        // Compare string
+        char name[p->name_len + 1];
+        name[p->name_len] = 0;
+        memcpy(name, p->name, p->name_len);
+        if (!strcmp(name, file))
+            return ext2_load_inode(mount, p->inode);
     }
 
     return (void*) 0;
@@ -190,10 +184,14 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
 
     // Direct blocks
     void* data = malloc(block_size);
-    ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size);
-    if (inode != (void*) 0) {
-        free(data);
-        return inode;
+    for (int i = 0; i < INODE_DIRECT_COUNT; i++) {
+        unsigned int block_id = dir->block[i];
+
+        ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, block_id);
+        if (inode != (void*) 0) {
+            free(data);
+            return inode;
+        }
     }
 
     // Singly indirect block
@@ -203,8 +201,7 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
         ext2fs_load_block(mount->block, mount->superblock, dir->block[INODE_SINGLE_INDIRECT], indirect1);
 
         for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size); i++) {
-            ext2fs_load_block(mount->block, mount->superblock, *i, data);
-            ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size);
+            ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *i);
             if (inode != (void*) 0) {
                 free(data);
                 free(indirect1);
@@ -222,8 +219,7 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
         for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size); i++) {
             ext2fs_load_block(mount->block, mount->superblock, *i, indirect2);
             for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size); j++) {
-                ext2fs_load_block(mount->block, mount->superblock, *j, data);
-                ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size);
+                ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *j);
                 if (inode != (void*) 0) {
                     free(data);
                     free(indirect1);
@@ -245,8 +241,7 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
             for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size); j++) {
                 ext2fs_load_block(mount->block, mount->superblock, *j, indirect3);
                 for (unsigned int* k = indirect3; k < (unsigned int*) (indirect3 + block_size); k++) {
-                    ext2fs_load_block(mount->block, mount->superblock, *k, data);
-                    ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size);
+                    ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *k);
                     if (inode != (void*) 0) {
                         free(data);
                         free(indirect1);
