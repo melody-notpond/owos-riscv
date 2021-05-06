@@ -128,9 +128,6 @@ typedef struct {
 // Mounts an ext2 file system from a generic block device.
 ext2fs_mount_t ext2_mount(generic_block_t* block);
 
-// Temporarily public
-void ext2fs_load_block(generic_block_t* block, ext2fs_superblock_t* superblock, unsigned int block_id, void* data);
-
 // ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
 // Fetches an inode from a directory.
 ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file);
@@ -138,6 +135,10 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
 // ext2_get_inode(ext2fs_mount_t*, ext2fs_inode_t*, char**, unsigned long long) -> ext2fs_inode_t*
 // Gets an inode by walking the path from the root inode.
 ext2fs_inode_t* ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char** path, unsigned long long path_node_count);
+
+// ext2_dump_inode_buffer(ext2fs_mount_t*, ext2fs_inode_t*, void*, unsigned long long) -> void
+// Dumps a buffer from an inode into memory.
+void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* data, unsigned long long block);
 
 #endif /* KERNEL_FS_EXT2_H */
 

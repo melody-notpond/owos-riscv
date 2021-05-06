@@ -286,3 +286,34 @@ ext2fs_inode_t* ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char
     return node;
 }
 
+// ext2_dump_inode_buffer(ext2fs_mount_t*, ext2fs_inode_t*, void*, unsigned long long) -> void
+// Dumps a buffer from an inode into memory.
+void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* data, unsigned long long block) {
+    unsigned long long block_size = 1024 << mount->superblock->log_block_size;
+
+    if (block * block_size > file->size)
+        return;
+
+    if (block < INODE_DIRECT_COUNT) {
+        ext2fs_load_block(mount->block, mount->superblock, file->block[block], data);
+    } else if (block < INODE_DIRECT_COUNT + block_size / 4) {
+        unsigned int* indirect = malloc(block_size);
+        ext2fs_load_block(mount->block, mount->superblock, file->block[INODE_SINGLE_INDIRECT], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[block - INODE_DIRECT_COUNT], data);
+        free(indirect);
+    } else if (block < INODE_DIRECT_COUNT + block_size / 4 + block_size * block_size / 16) {
+        unsigned int* indirect = malloc(block_size);
+        ext2fs_load_block(mount->block, mount->superblock, file->block[INODE_DOUBLE_INDIRECT], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) / (block_size * 4)], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) % (block_size * 4)], data);
+        free(indirect);
+    } else {
+        unsigned int* indirect = malloc(block_size);
+        ext2fs_load_block(mount->block, mount->superblock, file->block[INODE_DOUBLE_INDIRECT], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) / (block_size * 4)], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) / (block_size * 4) / (block_size * 4)], data);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) % (block_size * 4)], data);
+        free(indirect);
+    }
+}
+

@@ -29,7 +29,7 @@ void kmain() {
         }
 
         void* data = malloc(block_size);
-        ext2fs_load_block(root_block, mount.superblock, inode->block[0], data);
+        ext2_dump_inode_buffer(&mount, inode, data, 0);
         uart_put_hexdump(data, 32);
     } else {
         uart_puts("File not found.\n");
