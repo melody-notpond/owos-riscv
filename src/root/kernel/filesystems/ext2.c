@@ -99,7 +99,20 @@ struct __attribute__((__packed__, aligned(1))) s_dir_listing {
     char name[];
 };
 
+enum {
+    INODE_FILE_SOCKET   = 0xc000,
+    INODE_FILE_SYMLINK  = 0xa000,
+    INODE_FILE_REGULAR  = 0x8000,
+    INODE_FILE_BLOCK    = 0x6000,
+    INODE_FILE_DIR      = 0x4000,
+    INODE_FILE_CHAR     = 0x2000,
+    INODE_FILE_FIFO     = 0x1000,
+};
+
 ext2fs_inode_t* ext2_fetch_from_directory_helper(generic_block_t* block, ext2fs_superblock_t* superblock, ext2fs_block_descriptor_t* desc_table, ext2fs_inode_t* dir, char* file, void* data, unsigned long long block_size) {
+    if ((dir->mode & 0xf000) != INODE_FILE_DIR)
+        return (void*) 0;
+
     for (int i = 0; i < INODE_DIRECT_COUNT; i++) {
         unsigned int block_id = dir->block[i];
         if (block_id == 0)
@@ -120,6 +133,8 @@ ext2fs_inode_t* ext2_fetch_from_directory_helper(generic_block_t* block, ext2fs_
                 return ext2_load_inode(block, superblock, desc_table, p->inode);
         }
     }
+
+    return (void*) 0;
 }
 
 // ext2_fetch_from_directory(generic_block_t*, ext2fs_superblock_t*, ext2fs_block_descriptor_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
