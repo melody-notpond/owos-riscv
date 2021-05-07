@@ -204,3 +204,12 @@ void* memcpy(void* dest, const void* src, unsigned long int n) {
 
     return dest;
 }
+
+void* memset(void* p, int i, unsigned long int n) {
+    unsigned char c = i;
+    for (unsigned char* p1 = p; (void*) p1 < p + n; p1++) {
+        *p1 = c;
+    }
+    return p;
+}
+

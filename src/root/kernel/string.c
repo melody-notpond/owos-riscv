@@ -18,3 +18,10 @@ int strcmp(const char* s1, const char* s2) {
         return 0;
 }
 
+// strlen(const char*) -> unsigned long int
+// Calculates the length of a string (not including null terminator).
+unsigned long int strlen(const char* s) {
+    unsigned long int i;
+    for (i = 0; s[i]; i++);
+    return i;
+}
