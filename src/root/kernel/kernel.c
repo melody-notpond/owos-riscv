@@ -13,8 +13,15 @@ void kmain() {
 
     // Mount root file system
     ext2fs_mount_t mount = ext2_mount(root_block);
-    if (mount.root_inode != (void*) 0)
-        uart_puts("Mounted root file system\n");
+    if (mount.root_inode != (void*) 0) {
+        uart_puts("Mounted root file system (/dev/");
+        uart_puts(mount.block->name);
+        uart_puts(")\n");
+    } else {
+        uart_puts("Failed to mount file system\n");
+        while (1);
+    }
+
 
     // Get test file
     unsigned long long block_size = 1024 << mount.superblock->log_block_size;

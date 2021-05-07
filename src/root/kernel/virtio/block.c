@@ -191,9 +191,12 @@ char virtio_block_unpack_write(void* buffer, unsigned long long sector, unsigned
 void virtio_block_make_generic(unsigned char block_id, generic_block_t** last_block) {
     unsigned int size = sizeof(generic_block_t);
     generic_block_t* last = *last_block;
-    last->unpack_read = virtio_block_unpack_read;
-    last->unpack_write = virtio_block_unpack_write;
-    last->used = 1;
+    *last = (generic_block_t) {
+        .unpack_read = virtio_block_unpack_read,
+        .unpack_write = virtio_block_unpack_write,
+        .name = { 'v', 'b', 'l', 'k', '0' + block_id, 0 },
+        .used = 1,
+    };
     *(last->metadata) = block_id;
     *last_block += size;
 }
