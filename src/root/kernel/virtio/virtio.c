@@ -9,9 +9,7 @@ void virtio_probe(generic_block_t** last_block) {
     volatile void* base = (void*) VIRTIO_MMIO_BASE;
 
     for (; (long long) base <= VIRTIO_MMIO_TOP; base += VIRTIO_MMIO_INTERVAL) {
-        uart_puts("Probing 0x");
-        uart_put_hex((long long) base);
-        uart_puts(" for virtio devices\n");
+        uart_printf("Probing %p for virtio devices.\n", base);
 
         volatile virtio_mmio_t* mmio = (volatile virtio_mmio_t*) base;
         if (mmio->magic_value != VIRTIO_MAGIC) {
@@ -45,9 +43,7 @@ void virtio_probe(generic_block_t** last_block) {
                     uart_puts("Graphics device initialised successfully!\n");
                 break;
             default:
-                uart_puts("Unknown device 0x");
-                uart_put_hex(mmio->device_id);
-                uart_puts(". Resuming probing.\n");
+                uart_printf("Unknown device 0x%x. Resuming probing.\n", mmio->device_id);
                 break;
         }
     }

@@ -9,13 +9,13 @@ void uart_puts(char*);
 // Puts a character onto the UART port.
 void uart_putc(char);
 
-// uart_put_hex(long long) -> void
-// Puts a long long as a hex number into the UART port.
-void uart_put_hex(long long);
-
 // uart_getc(void) -> char
 // Gets a character from the UART port and echos it back.
 void uart_getc();
+
+// uart_printf(char*, ...) -> void
+// Writes its arguments to the UART port according to the format string and write function provided.
+__attribute__((format(printf, 1, 2))) void uart_printf(char* format, ...);
 
 // uart_put_hexdump(void*, unsigned long long)
 // Dumps a hexdump onto the UART port.

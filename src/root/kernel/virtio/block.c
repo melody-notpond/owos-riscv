@@ -66,9 +66,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
 
     // Get config
     volatile virtio_block_config_t* config = (volatile virtio_block_config_t*) mmio->config;
-    uart_puts("Block device has 0x");
-    uart_put_hex(config->capacity);
-    uart_puts(" sectors.\n");
+    uart_printf("Block device has 0x%llx sectors.\n", config->capacity);
 
     // Add block device
     long long i = (((long long) mmio) - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL;

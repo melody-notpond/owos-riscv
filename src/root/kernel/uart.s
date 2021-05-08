@@ -1,21 +1,3 @@
-/*
-static const MemMapEntry virt_memmap[] = {
-    [VIRT_DEBUG] =       {        0x0,         0x100 },
-    [VIRT_MROM] =        {     0x1000,        0xf000 },
-    [VIRT_TEST] =        {   0x100000,        0x1000 },
-    [VIRT_RTC] =         {   0x101000,        0x1000 },
-    [VIRT_CLINT] =       {  0x2000000,       0x10000 },
-    [VIRT_PCIE_PIO] =    {  0x3000000,       0x10000 },
-    [VIRT_PLIC] =        {  0xc000000, VIRT_PLIC_SIZE(VIRT_CPUS_MAX * 2) },
-    [VIRT_UART0] =       { 0x10000000,         0x100 },
-    [VIRT_VIRTIO] =      { 0x10001000,        0x1000 },
-    [VIRT_FW_CFG] =      { 0x10100000,          0x18 },
-    [VIRT_FLASH] =       { 0x20000000,     0x4000000 },
-    [VIRT_PCIE_ECAM] =   { 0x30000000,    0x10000000 },
-    [VIRT_PCIE_MMIO] =   { 0x40000000,    0x40000000 },
-    [VIRT_DRAM] =        { 0x80000000,           0x0 },
-};
-*/
 .set UART_BASE, 0x10000000
 
 .section .text
@@ -68,68 +50,6 @@ uart_init:
     li t1, 0b00000000
     sb t1, 0x01(t0)
 
-    ret
-
-
-# uart_put_hex(long long) -> void
-# Puts a long long as a hex number into the UART port.
-#
-# Parameters:
-# a0: long long     - The number to print out as hex.
-# Returns: nothing
-# Used registers:
-# - a0
-# - a1
-# - t0
-# - t1
-# - t2
-# - t3
-# - t4
-uart_put_hex:
-    # Push the return address
-    addi sp, sp, -0x10
-    sd ra, 0x0(sp)
-
-    # Print out zero if it's zero
-    bnez a0, uart_put_hex_nonzero
-    li a1, '0'
-    jal putc_wait
-    j uart_put_hex_return
-
-uart_put_hex_nonzero:
-    # Initialise t0 and t1
-    mv t0, a0
-    li t1, -4
-
-    # Get log_16(a0)
-uart_put_hex_log_loop:
-    srli t0, t0, 4
-    addi t1, t1, 4
-    bnez t0, uart_put_hex_log_loop
-
-    # Initialise t0, t2, and t3
-    li t0, UART_BASE
-    li t2, 0b1111
-    sll t2, t2, t1
-    mv t3, t1
-
-uart_put_hex_putc_loop:
-    # Get character and print
-    and a1, a0, t2
-    srl a1, a1, t3
-    la t4, uart_put_hex_array
-    add a1, a1, t4
-    lbu a1, 0x0(a1)
-    jal putc_wait
-
-    # Decrement and shift and branch
-    addi t3, t3, -4
-    srli t2, t2, 4
-    bnez t2, uart_put_hex_putc_loop
-
-uart_put_hex_return:
-    ld ra, 0x0(sp)
-    addi sp, sp, 0x10
     ret
 
 

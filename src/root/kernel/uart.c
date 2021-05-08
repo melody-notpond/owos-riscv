@@ -1,4 +1,16 @@
+#include <stdarg.h>
+
+#include "printf.h"
 #include "uart.h"
+
+// uart_printf(char*, ...) -> void
+// Writes its arguments to the UART port according to the format string and write function provided.
+__attribute__((format(printf, 1, 2))) void uart_printf(char* format, ...) {
+    va_list va;
+    va_start(va, format);
+    func_vprintf(uart_putc, format, va);
+    va_end(va);
+}
 
 // uart_log_16(unsigned long long) -> unsigned int
 // Gets the base 16 log of a number as an int.
@@ -21,12 +33,11 @@ void uart_put_hexdump(void* data, unsigned long long size) {
         // Print out buffer zeroes
         unsigned int num_zeros_two = num_zeros - uart_log_16(i) - 1;
         for (unsigned int j = 0; j < num_zeros_two; j++) {
-            uart_put_hex(0);
+            uart_printf("%x", 0);
         }
 
         // Print out label
-        uart_put_hex(i * 16);
-        uart_puts("    ");
+        uart_printf("%llx    ", i * 16);
 
         // Print out values
         for (int j = 0; j < 16; j++) {
@@ -38,9 +49,8 @@ void uart_put_hexdump(void* data, unsigned long long size) {
             else {
                 // Print out the value
                 if (data_char[index] < 16)
-                    uart_put_hex(0);
-                uart_put_hex(data_char[index]);
-                uart_putc(' ');
+                    uart_printf("%x", 0);
+                uart_printf("%x ", data_char[index]);
             }
         }
 

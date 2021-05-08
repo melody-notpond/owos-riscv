@@ -147,12 +147,8 @@ void* malloc(unsigned long int n) {
         else break;
     }
 
-    if (ptr >= (struct s_malloc_pointer_header*) &pages_bottom) {
-        uart_puts("[malloc] Out of memory!\nAttempted to load address 0x");
-        uart_put_hex((unsigned long long) ptr);
-        uart_putc('\n');
-    }
-
+    if (ptr >= (struct s_malloc_pointer_header*) &pages_bottom)
+        uart_printf("[malloc] Out of memory!\nAttempted to load address 0x%p\n", ptr);
 
     return (void*) 0;
 }

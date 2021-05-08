@@ -25,13 +25,8 @@ ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block) {
     }
 
     // Debug info
-    uart_puts("File system has 0x");
-    uart_put_hex(superblock->inodes_count);
-    uart_puts(" inodes.\n");
-
-    uart_puts("File system has 0x");
-    uart_put_hex(superblock->blocks_count);
-    uart_puts(" blocks.\n");
+    uart_printf("File system has 0x%x inodes.\n", superblock->inodes_count);
+    uart_printf("File system has 0x%x blocks.\n", superblock->blocks_count);
 
     return superblock;
 }
@@ -155,7 +150,7 @@ struct __attribute__((__packed__, aligned(1))) s_dir_listing {
     char name[];
 };
 
-unsigned int ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file, void* data, unsigned long long block_size, unsigned int block_id) {
+unsigned int ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, char* file, void* data, unsigned long long block_size, unsigned int block_id) {
     // Get directory listing from block
     ext2fs_load_block(mount->block, mount->superblock, block_id, data);
     struct s_dir_listing* p = data;
@@ -187,7 +182,7 @@ unsigned int ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* di
     for (int i = 0; i < INODE_DIRECT_COUNT; i++) {
         unsigned int block_id = dir->block[i];
 
-        unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, block_id);
+        unsigned int inode = ext2_fetch_from_directory_helper(mount, file, data, block_size, block_id);
         if (inode != 0) {
             free(data);
             return inode;
@@ -201,7 +196,7 @@ unsigned int ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* di
         ext2fs_load_block(mount->block, mount->superblock, dir->block[INODE_SINGLE_INDIRECT], indirect1);
 
         for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size); i++) {
-            unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *i);
+            unsigned int inode = ext2_fetch_from_directory_helper(mount, file, data, block_size, *i);
             if (inode != 0) {
                 free(data);
                 free(indirect1);
@@ -219,7 +214,7 @@ unsigned int ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* di
         for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size); i++) {
             ext2fs_load_block(mount->block, mount->superblock, *i, indirect2);
             for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size); j++) {
-                unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *j);
+                unsigned int inode = ext2_fetch_from_directory_helper(mount, file, data, block_size, *j);
                 if (inode != 0) {
                     free(data);
                     free(indirect1);
@@ -241,7 +236,7 @@ unsigned int ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* di
             for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size); j++) {
                 ext2fs_load_block(mount->block, mount->superblock, *j, indirect3);
                 for (unsigned int* k = indirect3; k < (unsigned int*) (indirect3 + block_size); k++) {
-                    unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *k);
+                    unsigned int inode = ext2_fetch_from_directory_helper(mount, file, data, block_size, *k);
                     if (inode != 0) {
                         free(data);
                         free(indirect1);
