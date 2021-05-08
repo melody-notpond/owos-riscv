@@ -23,7 +23,7 @@ virtio_block_error_code_t virtio_block_read(unsigned char block_id, unsigned lon
 // Reads sectors from a block device and dumps them into the provided pointer. Status is set to 0xff and remains 0xff until the read is finished.
 virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned long long sector, void* data, unsigned long long sector_count, volatile unsigned char* status);
 
-void virtio_block_make_generic(unsigned char block_id, generic_block_t** last_block);
+void virtio_block_make_generic(unsigned char block_id, generic_dir_t* dev);
 
 #endif /* KERNEL_VIRTIO_BLOCK_H */
 

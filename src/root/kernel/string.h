@@ -9,5 +9,9 @@ int strcmp(const char* s1, const char* s2);
 // Calculates the length of a string (not including null terminator).
 unsigned long int strlen(const char* s);
 
+// strdup(const char*) -> char*
+// Duplicates a string.
+char* strdup(const char* s);
+
 #endif /* KERNEL_STRING_H */
 

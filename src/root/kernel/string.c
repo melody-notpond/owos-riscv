@@ -1,3 +1,4 @@
+#include "memory.h"
 #include "string.h"
 
 // strcmp(const char*, const char*) -> int
@@ -24,4 +25,13 @@ unsigned long int strlen(const char* s) {
     unsigned long int i;
     for (i = 0; s[i]; i++);
     return i;
+}
+
+// strdup(const char*) -> char*
+// Duplicates a string.
+char* strdup(const char* s) {
+    unsigned long long size = strlen(s) + 1;
+    char* s2 = malloc(size);
+    memcpy(s2, s, size);
+    return s2;
 }

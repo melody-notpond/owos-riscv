@@ -5,7 +5,7 @@
 
 #define VIRTIO_MAGIC 0x74726976
 
-void virtio_probe(generic_block_t** last_block) {
+void virtio_probe(generic_dir_t* dev) {
     volatile void* base = (void*) VIRTIO_MMIO_BASE;
 
     for (; (long long) base <= VIRTIO_MMIO_TOP; base += VIRTIO_MMIO_INTERVAL) {
@@ -32,7 +32,7 @@ void virtio_probe(generic_block_t** last_block) {
                     uart_puts("Failed to initialise block device\n");
                 } else {
                     uart_puts("Block device initialised successfully!\n");
-                    virtio_block_make_generic(((unsigned long long) base - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL, last_block);
+                    virtio_block_make_generic(((unsigned long long) base - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL, dev);
                 }
                 break;
             case 0x10:
@@ -48,3 +48,4 @@ void virtio_probe(generic_block_t** last_block) {
         }
     }
 }
+

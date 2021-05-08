@@ -1,7 +1,7 @@
 #ifndef KERNEL_VIRTIO_H
 #define KERNEL_VIRTIO_H
 
-#include "../generic_block.h"
+#include "../filesystems/generic_file.h"
 
 #define VIRTIO_GENERIC_INIT(addr, device_features_do)                                                    \
     do {                                                                                                 \
@@ -105,7 +105,7 @@ typedef struct __attribute__((__packed__, aligned(4))) {
 	volatile char config[];
 } virtio_mmio_t;
 
-void virtio_probe(generic_block_t** last_block);
+void virtio_probe(generic_dir_t* dev);
 
 #endif /* KERNEL_VIRTIO_H */
 

@@ -125,9 +125,9 @@ typedef struct {
     ext2fs_inode_t* root_inode;
 } ext2fs_mount_t;
 
-// ext2_mount(generic_block_t*) -> ext2fs_mount_t
-// Mounts an ext2 file system from a generic block device.
-ext2fs_mount_t ext2_mount(generic_block_t* block);
+// ext2_mount(generic_block_t*, generic_filesystem_t*) -> char
+// Mounts an ext2 file system from a generic block device. Returns 0 on success.
+char ext2_mount(generic_block_t* block, generic_filesystem_t* fs);
 
 // ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> unsigned int
 // Fetches an inode's index from a directory.
@@ -144,10 +144,6 @@ void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* d
 // generic_file_t ext2_create_generic_regular_file(generic_filesystem_t*) -> generic_file_t
 // Creates a generic file wrapper from an inode.
 generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsigned int inode_index);
-
-// ext2_create_generic_filesystem(ext2fs_mount_t*) -> generic_filesystem_t
-// Creates a generic file system for an ext2 file system.
-generic_filesystem_t ext2_create_generic_filesystem(ext2fs_mount_t* mount);
 
 #endif /* KERNEL_FS_EXT2_H */
 

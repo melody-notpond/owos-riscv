@@ -1,6 +1,7 @@
 #include "block.h"
 #include "../interrupts.h"
 #include "../memory.h"
+#include "../string.h"
 #include "../uart.h"
 
 typedef struct __attribute__((__packed__, aligned(1))) { 
@@ -186,16 +187,21 @@ char virtio_block_unpack_write(void* buffer, unsigned long long sector, unsigned
     return -1;
 }
 
-void virtio_block_make_generic(unsigned char block_id, generic_block_t** last_block) {
-    unsigned int size = sizeof(generic_block_t);
-    generic_block_t* last = *last_block;
-    *last = (generic_block_t) {
+void virtio_block_make_generic(unsigned char block_id, generic_dir_t* dev) {
+    generic_block_t device = {
         .unpack_read = virtio_block_unpack_read,
         .unpack_write = virtio_block_unpack_write,
-        .name = { 'v', 'b', 'l', 'k', '0' + block_id, 0 },
         .used = 1,
+        .metadata = { block_id, 0 }
     };
-    *(last->metadata) = block_id;
-    *last_block += size;
+
+    char name[] = { 'v', 'i', 'r', 't', '-', 'b', 'l', 'k', '0' + block_id, 0 };
+    generic_dir_append_entry(dev, (struct s_dir_entry) {
+        .name = strdup(name),
+        .tag = DIR_ENTRY_TYPE_BLOCK,
+        .value = {
+            .block = device
+        }
+    });
 }
 

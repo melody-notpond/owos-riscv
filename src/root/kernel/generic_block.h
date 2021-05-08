@@ -10,9 +10,8 @@
 typedef struct s_generic_block {
     char (*unpack_read)(void*, unsigned long long, unsigned long long, unsigned char*);
     char (*unpack_write)(void*, unsigned long long, unsigned long long, unsigned char*);
-    char name[8];
     unsigned char used;
-    unsigned char metadata[7];
+    unsigned char metadata[15];
 } __attribute__((__packed__, aligned(1))) generic_block_t;
 
 // generic_block_read(generic_block_t*, void*, unsigned long long, unsigned long long) -> char

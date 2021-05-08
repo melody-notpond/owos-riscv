@@ -93,55 +93,6 @@ ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t*
     return ext2_load_inode(&mount, 2);
 }
 
-// ext2_mount(generic_block_t*) -> ext2fs_mount_t
-// Mounts an ext2 file system from a generic block device.
-ext2fs_mount_t ext2_mount(generic_block_t* block) {
-    // Get superblock
-    ext2fs_superblock_t* superblock = ext2_load_superblock(block);
-    if (superblock == (void*) 0)
-        return (ext2fs_mount_t) {
-            .block      = (void*) 0,
-            .superblock = (void*) 0,
-            .desc_table = (void*) 0,
-            .root_inode = (void*) 0
-        };
-
-    // Get descriptor table
-    ext2fs_block_descriptor_t* desc_table = ext2_load_block_descriptor_table(block, superblock);
-    if (desc_table == (void*) 0) {
-        free(superblock);
-        return (ext2fs_mount_t) {
-            .block      = (void*) 0,
-            .superblock = (void*) 0,
-            .desc_table = (void*) 0,
-            .root_inode = (void*) 0
-        };
-    }
-
-    // Get root inode
-    ext2fs_inode_t* root_inode = ext2_get_root_inode(block, superblock, desc_table);
-    if (root_inode == (void*) 0) {
-        free(superblock);
-        free(desc_table);
-        return (ext2fs_mount_t) {
-            .block      = (void*) 0,
-            .superblock = (void*) 0,
-            .desc_table = (void*) 0,
-            .root_inode = (void*) 0
-        };
-    }
-
-    // TODO: Update metadata
-
-    // Success!
-    return (ext2fs_mount_t) {
-        .block      = block,
-        .superblock = superblock,
-        .desc_table = desc_table,
-        .root_inode = root_inode
-    };
-}
-
 struct __attribute__((__packed__, aligned(1))) s_dir_listing {
     unsigned int inode;
     unsigned short rec_len;
@@ -289,25 +240,28 @@ void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* d
     if (block * block_size > file->size)
         return;
 
+    unsigned long long pointer_count = block_size / 4;
     if (block < INODE_DIRECT_COUNT) {
         ext2fs_load_block(mount->block, mount->superblock, file->block[block], data);
-    } else if (block < INODE_DIRECT_COUNT + block_size / 4) {
+    } else if (block < INODE_DIRECT_COUNT + pointer_count) {
         unsigned int* indirect = malloc(block_size);
         ext2fs_load_block(mount->block, mount->superblock, file->block[INODE_SINGLE_INDIRECT], indirect);
         ext2fs_load_block(mount->block, mount->superblock, indirect[block - INODE_DIRECT_COUNT], data);
         free(indirect);
-    } else if (block < INODE_DIRECT_COUNT + block_size / 4 + block_size * block_size / 16) {
+    } else if (block < INODE_DIRECT_COUNT + pointer_count + pointer_count * pointer_count) {
         unsigned int* indirect = malloc(block_size);
         ext2fs_load_block(mount->block, mount->superblock, file->block[INODE_DOUBLE_INDIRECT], indirect);
-        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) / (block_size * 4)], indirect);
-        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) % (block_size * 4)], data);
+        block -= INODE_DIRECT_COUNT - pointer_count;
+        ext2fs_load_block(mount->block, mount->superblock, indirect[block / pointer_count], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[block % pointer_count], data);
         free(indirect);
     } else {
         unsigned int* indirect = malloc(block_size);
-        ext2fs_load_block(mount->block, mount->superblock, file->block[INODE_DOUBLE_INDIRECT], indirect);
-        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) / (block_size * 4)], indirect);
-        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) / (block_size * 4) / (block_size * 4)], data);
-        ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) % (block_size * 4)], data);
+        block -= INODE_DIRECT_COUNT - pointer_count - pointer_count * pointer_count;
+        ext2fs_load_block(mount->block, mount->superblock, file->block[INODE_TRIPLE_INDIRECT], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[block / pointer_count / pointer_count], data);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[block / pointer_count % pointer_count], indirect);
+        ext2fs_load_block(mount->block, mount->superblock, indirect[block % pointer_count], data);
         free(indirect);
     }
 }
@@ -386,12 +340,44 @@ generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsign
     return file;
 }
 
-// ext2_create_generic_filesystem(ext2fs_mount_t*) -> generic_filesystem_t
-// Creates a generic file system for an ext2 file system.
-generic_filesystem_t ext2_create_generic_filesystem(ext2fs_mount_t* mount) {
-    return (generic_filesystem_t) {
+// ext2_mount(generic_block_t*, generic_filesystem_t*) -> char
+// Mounts an ext2 file system from a generic block device. Returns 0 on success.
+char ext2_mount(generic_block_t* block, generic_filesystem_t* fs) {
+    // Get superblock
+    ext2fs_superblock_t* superblock = ext2_load_superblock(block);
+    if (superblock == (void*) 0)
+        return 1;
+
+    // Get descriptor table
+    ext2fs_block_descriptor_t* desc_table = ext2_load_block_descriptor_table(block, superblock);
+    if (desc_table == (void*) 0) {
+        free(superblock);
+        return 1;
+    }
+
+    // Get root inode
+    ext2fs_inode_t* root_inode = ext2_get_root_inode(block, superblock, desc_table);
+    if (root_inode == (void*) 0) {
+        free(superblock);
+        free(desc_table);
+        return 1;
+    }
+
+    // TODO: Update metadata
+
+    // Create mount data structure
+    ext2fs_mount_t* mount = malloc(sizeof(ext2fs_mount_t));
+    *mount = (ext2fs_mount_t) {
+        .block = block,
+        .superblock = superblock,
+        .desc_table = desc_table,
+        .root_inode = root_inode
+    };
+    *fs = (generic_filesystem_t) {
         .mount = mount,
         .read_char = ext2_generic_file_read_char
     };
-}
 
+    // Success!
+    return 0;
+}
