@@ -155,7 +155,7 @@ struct __attribute__((__packed__, aligned(1))) s_dir_listing {
     char name[];
 };
 
-ext2fs_inode_t* ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file, void* data, unsigned long long block_size, unsigned int block_id) {
+unsigned int ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file, void* data, unsigned long long block_size, unsigned int block_id) {
     // Get directory listing from block
     ext2fs_load_block(mount->block, mount->superblock, block_id, data);
     struct s_dir_listing* p = data;
@@ -168,17 +168,17 @@ ext2fs_inode_t* ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, ext2fs_i
         name[p->name_len] = 0;
         memcpy(name, p->name, p->name_len);
         if (!strcmp(name, file))
-            return ext2_load_inode(mount, p->inode);
+            return p->inode;
     }
 
-    return (void*) 0;
+    return 0;
 }
 
-// ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
-// Fetches an inode from a directory.
-ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file) {
+// ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> unsigned int
+// Fetches an inode's index from a directory.
+unsigned int ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file) {
     if ((dir->mode & 0xf000) != INODE_FILE_DIR)
-        return (void*) 0;
+        return 0;
 
     unsigned long long block_size = 1024 << mount->superblock->log_block_size;
 
@@ -187,8 +187,8 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
     for (int i = 0; i < INODE_DIRECT_COUNT; i++) {
         unsigned int block_id = dir->block[i];
 
-        ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, block_id);
-        if (inode != (void*) 0) {
+        unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, block_id);
+        if (inode != 0) {
             free(data);
             return inode;
         }
@@ -201,8 +201,8 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
         ext2fs_load_block(mount->block, mount->superblock, dir->block[INODE_SINGLE_INDIRECT], indirect1);
 
         for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size); i++) {
-            ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *i);
-            if (inode != (void*) 0) {
+            unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *i);
+            if (inode != 0) {
                 free(data);
                 free(indirect1);
                 return inode;
@@ -219,8 +219,8 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
         for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size); i++) {
             ext2fs_load_block(mount->block, mount->superblock, *i, indirect2);
             for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size); j++) {
-                ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *j);
-                if (inode != (void*) 0) {
+                unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *j);
+                if (inode != 0) {
                     free(data);
                     free(indirect1);
                     free(indirect2);
@@ -241,8 +241,8 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
             for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size); j++) {
                 ext2fs_load_block(mount->block, mount->superblock, *j, indirect3);
                 for (unsigned int* k = indirect3; k < (unsigned int*) (indirect3 + block_size); k++) {
-                    ext2fs_inode_t* inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *k);
-                    if (inode != (void*) 0) {
+                    unsigned int inode = ext2_fetch_from_directory_helper(mount, dir, file, data, block_size, *k);
+                    if (inode != 0) {
                         free(data);
                         free(indirect1);
                         free(indirect2);
@@ -258,27 +258,32 @@ ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t*
     free(indirect1);
     free(indirect2);
     free(indirect3);
-    return (void*) 0;
+    return 0;
 }
 
-// ext2_get_inode(ext2fs_mount_t*, ext2fs_inode_t*, char**, unsigned long long) -> ext2fs_inode_t*
-// Gets an inode by walking the path from a root inode.
-ext2fs_inode_t* ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char** path, unsigned long long path_node_count) {
+// ext2_get_inode(ext2fs_mount_t*, ext2fs_inode_t*, char**, unsigned long long) -> unsigned int
+// Gets an inode's index by walking the path from a root inode.
+unsigned int ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char** path, unsigned long long path_node_count) {
     ext2fs_inode_t* node = root;
     for (unsigned long long i = 0; i < path_node_count; i++) {
         char* path_node = path[i];
-        ext2fs_inode_t* n = ext2_fetch_from_directory(mount, node, path_node);
+        unsigned int inode = ext2_fetch_from_directory(mount, node, path_node);
 
         if (node != root && node != mount->root_inode)
             free(node);
 
-        node = n;
-
-        if (node == (void*) 0)
-            return (void*) 0;
+        if (inode == 0)
+            return 0;
+        else if (i == path_node_count - 1)
+            return inode;
+        else {
+            node = ext2_load_inode(mount, inode);
+            if (node == (void*) 0)
+                return 0;
+        }
     }
 
-    return node;
+    return 0;
 }
 
 // ext2_dump_inode_buffer(ext2fs_mount_t*, ext2fs_inode_t*, void*, unsigned long long) -> void
@@ -310,5 +315,88 @@ void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* d
         ext2fs_load_block(mount->block, mount->superblock, indirect[(block - INODE_DIRECT_COUNT) % (block_size * 4)], data);
         free(indirect);
     }
+}
+
+// ext2_generic_file_read_char(generic_file_t*) -> int
+// Wrapper function for reading a character from a file. Returns EOF when at end of file.
+int ext2_generic_file_read_char(generic_file_t* file) {
+    if (file == (void*) 0)
+        return EOF;
+    ext2fs_inode_t* inode = file->metadata_buffer;
+    if (inode == (void*) 0)
+        return EOF;
+
+    // Return EOF if the current position is past the size of the file
+    if (file->pos >= (inode->size | ((unsigned long long) inode->dir_acl) << 32))
+        return EOF;
+
+    // Get some useful metadata
+    ext2fs_mount_t* mount = file->fs->mount;
+    unsigned long long block_size = 1024 << mount->superblock->log_block_size;
+
+    // Get character
+    char* buffer = (char*) (file->buffers[file->current_buffer]);
+    char c = buffer[file->buffer_pos];
+
+    // Set up buffers for the next character
+    file->pos++;
+    file->buffer_pos++;
+    if (file->buffer_pos >= block_size) {
+        // TODO: get next buffer
+        return EOF;
+    }
+
+    return c;
+}
+
+// generic_file_t ext2_create_generic_regular_file(generic_filesystem_t*) -> generic_file_t
+// Creates a generic file wrapper from an inode.
+generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsigned int inode_index) {
+    generic_file_t file = {
+        .type = GENERIC_FILE_TYPE_REGULAR,
+        .fs = fs,
+        .pos = 0,
+        .current_buffer = 0,
+        .buffer_pos = 0,
+        .buffer_block_indices = { inode_index, 0 },
+        .metadata_buffer = ext2_load_inode(fs->mount, inode_index),
+        .buffers = { 0 },
+        .written_buffers = { 0 }
+    };
+
+    // Failed to get inode
+    if (file.metadata_buffer == (void*) 0)
+        return file;
+
+    // Inode does not represent a regular file
+    ext2fs_inode_t* inode = file.metadata_buffer;
+    if ((inode->mode & 0xf000) != INODE_FILE_REGULAR) {
+        free(file.metadata_buffer);
+        file.metadata_buffer = (void*) 0;
+        return file;
+    }
+
+    // Check if inode has data
+    if (inode->size == 0 && inode->file_acl == 0)
+        return file;
+
+    // Get first buffer
+    ext2fs_mount_t* mount = fs->mount;
+    unsigned long long block_size = 1024 << mount->superblock->log_block_size;
+    void* buffer = malloc(block_size);
+    file.buffer_block_indices[1] = inode->block[0];
+    ext2fs_load_block(mount->block, mount->superblock, file.buffer_block_indices[1], buffer);
+    file.buffers[0] = buffer;
+
+    return file;
+}
+
+// ext2_create_generic_filesystem(ext2fs_mount_t*) -> generic_filesystem_t
+// Creates a generic file system for an ext2 file system.
+generic_filesystem_t ext2_create_generic_filesystem(ext2fs_mount_t* mount) {
+    return (generic_filesystem_t) {
+        .mount = mount,
+        .read_char = ext2_generic_file_read_char
+    };
 }
 

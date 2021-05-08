@@ -1,4 +1,5 @@
 #include "filesystems/ext2.h"
+#include "filesystems/generic_file.h"
 #include "memory.h"
 #include "uart.h"
 #include "virtio/block.h"
@@ -22,24 +23,22 @@ void kmain() {
         while (1);
     }
 
-
     // Get test file
-    unsigned long long block_size = 1024 << mount.superblock->log_block_size;
     char* path[] = {"uwu", "nya", "owo"};
-    ext2fs_inode_t* inode = ext2_get_inode(&mount, mount.root_inode, path, 3);
+    unsigned int inode = ext2_get_inode(&mount, mount.root_inode, path, 3);
 
-    if (inode != (void*) 0) {
-        uart_puts("File found!\nInode entries:\n");
-        for (int i = 0; i < 15; i++) {
-            uart_put_hex(inode->block[i]);
-            uart_putc('\n');
+    if (inode != 0) {
+        uart_puts("Found file /uwu/nya/owo\nContents of file:\n");
+        generic_filesystem_t fs = ext2_create_generic_filesystem(&mount);
+        generic_file_t file = ext2_create_generic_regular_file(&fs, inode);
+
+        int c;
+        while ((c = generic_file_read_char(&file)) != EOF) {
+            uart_putc(c);
         }
-
-        void* data = malloc(block_size);
-        ext2_dump_inode_buffer(&mount, inode, data, 0);
-        uart_put_hexdump(data, 32);
+        uart_putc('\n');
     } else {
-        uart_puts("File not found.\n");
+        uart_puts("File /uwu/nya/owo not found.\n");
     }
 
     // Hang

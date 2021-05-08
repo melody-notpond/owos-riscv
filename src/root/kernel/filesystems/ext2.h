@@ -2,6 +2,7 @@
 #define KERNEL_FS_EXT2_H
 
 #include "../generic_block.h"
+#include "generic_file.h"
 
 typedef struct __attribute__((__packed__, aligned(1))) {
     unsigned int inodes_count;
@@ -128,17 +129,25 @@ typedef struct {
 // Mounts an ext2 file system from a generic block device.
 ext2fs_mount_t ext2_mount(generic_block_t* block);
 
-// ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> ext2fs_inode_t*
-// Fetches an inode from a directory.
-ext2fs_inode_t* ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file);
+// ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> unsigned int
+// Fetches an inode's index from a directory.
+unsigned int ext2_fetch_from_directory(ext2fs_mount_t* mount, ext2fs_inode_t* dir, char* file);
 
-// ext2_get_inode(ext2fs_mount_t*, ext2fs_inode_t*, char**, unsigned long long) -> ext2fs_inode_t*
-// Gets an inode by walking the path from the root inode.
-ext2fs_inode_t* ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char** path, unsigned long long path_node_count);
+// ext2_get_inode(ext2fs_mount_t*, ext2fs_inode_t*, char**, unsigned long long) -> unsigned int
+// Gets an inode's index by walking the path from a root inode.
+unsigned int ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char** path, unsigned long long path_node_count);
 
 // ext2_dump_inode_buffer(ext2fs_mount_t*, ext2fs_inode_t*, void*, unsigned long long) -> void
 // Dumps a buffer from an inode into memory.
 void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* data, unsigned long long block);
+
+// generic_file_t ext2_create_generic_regular_file(generic_filesystem_t*) -> generic_file_t
+// Creates a generic file wrapper from an inode.
+generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsigned int inode_index);
+
+// ext2_create_generic_filesystem(ext2fs_mount_t*) -> generic_filesystem_t
+// Creates a generic file system for an ext2 file system.
+generic_filesystem_t ext2_create_generic_filesystem(ext2fs_mount_t* mount);
 
 #endif /* KERNEL_FS_EXT2_H */
 
