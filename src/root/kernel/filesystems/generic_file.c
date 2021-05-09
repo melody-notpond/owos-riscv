@@ -98,6 +98,8 @@ char cleanup_directory(generic_dir_t* dir) {
     return 0;
 }
 
+// recursive_remove_directories(generic_dir_t*) -> void
+// Recursively removes directories.
 void recursive_remove_directories(generic_dir_t* dir) {
     generic_dir_t d = *dir;
 
@@ -173,7 +175,7 @@ void generic_dir_append_entry(generic_dir_t* dir, struct s_dir_entry entry) {
 }
 
 // generic_dir_lookup_dir(generic_dir_t*, char*) -> struct s_dir_entry*
-// Returns a pointer to the entry with the same name if found. Returns null if not found.
+// Returns an entry with the same name if found. Returns a zeroed out structure if not found.
 struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name) {
     // Check cached entries first
     struct s_dir_entry* entries = (*dir)->entries;
@@ -188,3 +190,37 @@ struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name) {
     return (*dir)->fs.lookup(dir, name);
 }
 
+// generic_dir_lookup(generic_dir_t*, char*) -> struct s_dir_entry
+// Returns an entry with the same name if found. Returns a zeroed out structure if not found.
+struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path) {
+    char* path_buffer = malloc(strlen(path) + 1);
+    path_buffer[0] = 0;
+    unsigned long long i = 0;
+    struct s_dir_entry entry = { 0 };
+    for (char* p = path; *p; p++) {
+        if (*p == '/') {
+            path_buffer[i] = 0;
+            i = 0;
+
+            if (path_buffer[0] == 0)
+                continue;
+
+            entry = generic_dir_lookup_dir(dir, path_buffer);
+            if (entry.tag != DIR_ENTRY_TYPE_DIR) {
+                free(path_buffer);
+                return (struct s_dir_entry) { 0 };
+            }
+
+            dir = entry.value.dir;
+        } else {
+            path_buffer[i++] = *p;
+        }
+    }
+
+    if (path_buffer[0] != 0) {
+        entry = generic_dir_lookup_dir(dir, path_buffer);
+    }
+
+    free(path_buffer);
+    return entry;
+}

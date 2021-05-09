@@ -14,8 +14,7 @@ void kmain() {
     uart_printf("Heap has 0x%llx bytes free.\n", memfree());
 
     // Mount root file system
-    generic_dir_t* dev = generic_dir_lookup_dir(root, "dev").value.dir;
-    struct s_dir_entry entry = generic_dir_lookup_dir(dev, "virt-blk7");
+    struct s_dir_entry entry = generic_dir_lookup(root, "/dev/virt-blk7");
     if (!mount_block_device(root, entry.value.block)) {
         uart_printf("Mounted root file system (/dev/%s)\n", entry.name);
     } else {
@@ -24,16 +23,19 @@ void kmain() {
     }
 
     // Get test file
-    struct s_dir_entry uwu = generic_dir_lookup_dir(root         , "uwu");
-    struct s_dir_entry nya = generic_dir_lookup_dir(uwu.value.dir, "nya");
-    struct s_dir_entry owo = generic_dir_lookup_dir(nya.value.dir, "owo");
-    generic_file_t* file = owo.value.file;
-    int c;
-    while ((c = generic_file_read_char(file)) != EOF) {
-        uart_putc(c);
+    struct s_dir_entry owo = generic_dir_lookup(root, "/uwu/nya/owo");
+    if (owo.tag != 0) {
+        generic_file_t* file = owo.value.file;
+        int c;
+        while ((c = generic_file_read_char(file)) != EOF) {
+            uart_putc(c);
+        }
+        uart_putc('\n');
+        close_generic_file(file);
+    } else {
+        uart_puts("Could not find file /uwu/nya/owo\n");
     }
-    uart_putc('\n');
-    close_generic_file(file);
+
     cleanup_directory(root);
     unmount_generic_dir(root);
     clean_virtio_block_devices();
@@ -67,10 +69,12 @@ void kinit() {
     });
 
     uart_printf("uwu\nHeap has 0x%llx bytes.\n", memfree());
+
     // Probe for available virtio devices
     virtio_probe(dev);
 
     uart_printf("Heap has 0x%llx bytes.\n", memfree());
+
     // Register file systems
     register_fs_mounter(ext2_mount);
 

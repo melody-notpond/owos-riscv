@@ -26,7 +26,7 @@ typedef struct s_generic_filesystem {
 } generic_filesystem_t;
 
 typedef enum {
-    DIR_ENTRY_TYPE_UNUSED,
+    DIR_ENTRY_TYPE_UNUSED = 0,
     DIR_ENTRY_TYPE_UNKNOWN,
     DIR_ENTRY_TYPE_DIR,
     DIR_ENTRY_TYPE_BLOCK,
@@ -106,9 +106,9 @@ generic_dir_t* init_generic_dir();
 // Appends an entry to a directory.
 void generic_dir_append_entry(generic_dir_t* dir, struct s_dir_entry entry);
 
-// generic_dir_lookup_dir(generic_dir_t*, char*) -> struct s_dir_entry
-// Returns a pointer to the entry with the same name if found. Returns null if not found.
-struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name);
+// generic_dir_lookup(generic_dir_t*, char*) -> struct s_dir_entry
+// Returns an entry with the same name if found. Returns a zeroed out structure if not found.
+struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path);
 
 #endif /* KERNEL_FS_GENERIC_H */
 
