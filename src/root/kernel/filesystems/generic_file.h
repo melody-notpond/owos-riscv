@@ -9,21 +9,27 @@
 #define BUFFER_COUNT 15
 
 typedef enum {
+    GENERIC_FILE_TYPE_UNKNOWN,
     GENERIC_FILE_TYPE_DIR,
     GENERIC_FILE_TYPE_REGULAR,
 } generic_file_type_t;
 
 typedef struct s_generic_file generic_file_t;
+typedef struct s_generic_dir *generic_dir_t;
+struct s_dir_entry;
 
-typedef struct {
+typedef struct s_generic_filesystem {
     void* mount;
+    char (*unmount)(struct s_generic_filesystem*, generic_file_t*);
     int (*read_char)(generic_file_t*);
+    struct s_dir_entry (*lookup)(generic_dir_t*, char*);
 } generic_filesystem_t;
 
 typedef enum {
+    DIR_ENTRY_TYPE_UNKNOWN,
     DIR_ENTRY_TYPE_DIR,
-    DIR_ENTRY_TYPE_MOUNT,
     DIR_ENTRY_TYPE_BLOCK,
+    DIR_ENTRY_TYPE_REGULAR,
 } dir_entry_type_t;
 
 struct s_dir_entry {
@@ -33,19 +39,22 @@ struct s_dir_entry {
     union {
         struct s_generic_dir** dir;
 
-        generic_block_t block;
+        generic_block_t* block;
+
+        generic_file_t* file;
     } value;
 };
 
-typedef struct s_generic_dir {
+struct s_generic_dir {
     generic_filesystem_t fs;
     generic_file_t* value;
+    struct s_generic_dir** parent;
 
     // List of mounted file systems and directories that contain mounted file systems
     unsigned long long length;
     unsigned long long size;
     struct s_dir_entry entries[];
-} *generic_dir_t;
+};
 
 struct s_generic_file {
     generic_file_type_t type;
@@ -68,13 +77,21 @@ static inline int generic_file_read_char(generic_file_t* file) {
         return EOF;
 }
 
-// register_fs_mounter(char (*)(generic_block_t*, generic_filesystem_t*)) -> void
+// register_fs_mounter(char (*)(generic_block_t*, generic_filesystem_t*, generic_file_t*)) -> void
 // Register a file system mounter/driver.
-void register_fs_mounter(char (*mounter)(generic_block_t*, generic_filesystem_t*));
+void register_fs_mounter(char (*mounter)(generic_block_t*, generic_filesystem_t*, generic_file_t*));
 
 // mount_block_device(generic_dir_t*, generic_block_t*) -> void
 // Mounts a block device. Returns 0 on success.
 char mount_block_device(generic_dir_t* dir, generic_block_t* block);
+
+// close_generic_file(generic_file_t*) -> void
+// Closes a generic file.
+void close_generic_file(generic_file_t* file);
+
+// unmount_generic_dir(generic_dir_t* dir) -> char
+// Unmounts a generic directory. Returns 0 on success.
+char unmount_generic_dir(generic_dir_t* dir);
 
 // init_generic_dir() -> generic_dir_t*
 // Initialises a generic directory.
@@ -84,9 +101,9 @@ generic_dir_t* init_generic_dir();
 // Appends an entry to a directory.
 void generic_dir_append_entry(generic_dir_t* dir, struct s_dir_entry entry);
 
-// generic_dir_lookup_dir(generic_dir_t*, char*) -> struct s_dir_entry*
+// generic_dir_lookup_dir(generic_dir_t*, char*) -> struct s_dir_entry
 // Returns a pointer to the entry with the same name if found. Returns null if not found.
-struct s_dir_entry* generic_dir_lookup_dir(generic_dir_t* dir, char* name);
+struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name);
 
 #endif /* KERNEL_FS_GENERIC_H */
 

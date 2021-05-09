@@ -7,6 +7,10 @@ _start:
     csrr t0, mhartid
     bnez t0, finish
 
+    # Set machine trap vector
+    la t0, interrupt_handler
+    csrw mtvec, t0
+
     # Initialise stack pointer and mscratch
     la sp, isr_stack_end
     csrrw sp, mscratch, sp
@@ -24,10 +28,6 @@ _start:
     j kinit
 
 interrupt_init:
-    # Set machine trap vector
-    la t0, interrupt_handler
-    csrw mtvec, t0
-
     # Enable all interrupts in the PLIC
     li t0, 0xffffffff
     li t1, 0x0c002000

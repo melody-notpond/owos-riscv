@@ -215,7 +215,7 @@ unsigned int ext2_get_inode(ext2fs_mount_t* mount, ext2fs_inode_t* root, char** 
         char* path_node = path[i];
         unsigned int inode = ext2_fetch_from_directory(mount, node, path_node);
 
-        if (node != root && node != mount->root_inode)
+        if (node != root)
             free(node);
 
         if (inode == 0)
@@ -298,6 +298,61 @@ int ext2_generic_file_read_char(generic_file_t* file) {
     return c;
 }
 
+struct s_dir_entry ext2_generic_dir_lookup(generic_dir_t* dir, char* name) {
+    // Get inode index
+    generic_dir_t d = *dir;
+    ext2fs_mount_t* mount = d->fs.mount;
+    unsigned int inode_index = ext2_fetch_from_directory(mount, d->value->metadata_buffer, name);
+    if (inode_index == 0)
+        return (struct s_dir_entry) { 0 };
+
+    // Get inode
+    ext2fs_inode_t* inode = ext2_load_inode(mount, inode_index);
+    unsigned short t = inode->mode & 0xf000;
+    dir_entry_type_t dir_type = t == INODE_FILE_DIR ? DIR_ENTRY_TYPE_DIR : t == INODE_FILE_REGULAR ? DIR_ENTRY_TYPE_REGULAR : DIR_ENTRY_TYPE_UNKNOWN;
+    generic_file_type_t file_type  = t == INODE_FILE_DIR ? GENERIC_FILE_TYPE_DIR : t == INODE_FILE_REGULAR ? GENERIC_FILE_TYPE_REGULAR : GENERIC_FILE_TYPE_UNKNOWN;
+
+    // Get first buffer
+    void* buffer;
+    if (inode->block[0] != 0) {
+        buffer = malloc(1024 << mount->superblock->log_block_size);
+        ext2fs_load_block(mount->block, mount->superblock, inode->block[0], buffer);
+    }
+
+    // Create generic file
+    generic_file_t* file = malloc(sizeof(generic_file_t));
+    *file = (generic_file_t) {
+        .type = file_type,
+        .fs = &d->fs,
+        .pos = 0,
+        .current_buffer = 0,
+        .buffer_pos = 0,
+        .buffer_block_indices = { inode_index, inode->block[0], 0 },
+        .metadata_buffer = inode,
+        .buffers = { buffer, 0 },
+        .written_buffers = { 0 }
+    };
+
+    // Append entry
+    struct s_dir_entry entry = {
+        .name = strdup(name),
+        .tag = dir_type,
+    };
+
+    if (dir_type == DIR_ENTRY_TYPE_DIR) {
+        generic_dir_t* dir = init_generic_dir();
+        generic_dir_t d2 = *dir;
+        d2->fs = d->fs;
+        d2->value = file;
+        entry.value.dir = dir;
+    } else {
+        entry.value.file = file;
+    }
+    generic_dir_append_entry(dir, entry);
+
+    return entry;
+}
+
 // generic_file_t ext2_create_generic_regular_file(generic_filesystem_t*) -> generic_file_t
 // Creates a generic file wrapper from an inode.
 generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsigned int inode_index) {
@@ -340,9 +395,19 @@ generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsign
     return file;
 }
 
-// ext2_mount(generic_block_t*, generic_filesystem_t*) -> char
+// ext2_unmount(generic_filesystem_t*, generic_file_t*) -> char
+// Unmounts an ext2 file system.
+char ext2_unmount(generic_filesystem_t* fs, generic_file_t* root) {
+    ext2fs_mount_t* mount = fs->mount;
+    free(mount->superblock);
+    free(mount->desc_table);
+    root = root; // suppress warning (TODO: save state)
+    return 0;
+}
+
+// ext2_mount(generic_block_t*, generic_filesystem_t*, generic_file_t*) -> char
 // Mounts an ext2 file system from a generic block device. Returns 0 on success.
-char ext2_mount(generic_block_t* block, generic_filesystem_t* fs) {
+char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t* root) {
     // Get superblock
     ext2fs_superblock_t* superblock = ext2_load_superblock(block);
     if (superblock == (void*) 0)
@@ -371,11 +436,29 @@ char ext2_mount(generic_block_t* block, generic_filesystem_t* fs) {
         .block = block,
         .superblock = superblock,
         .desc_table = desc_table,
-        .root_inode = root_inode
     };
     *fs = (generic_filesystem_t) {
         .mount = mount,
-        .read_char = ext2_generic_file_read_char
+        .unmount = ext2_unmount,
+        .read_char = ext2_generic_file_read_char,
+        .lookup = ext2_generic_dir_lookup
+    };
+
+    // Get first buffer
+    void* buffer = malloc(1024 << superblock->log_block_size);
+    ext2fs_load_block(block, superblock, root_inode->block[0], buffer);
+
+    // Create directory structure
+    *root = (generic_file_t) {
+        .type = GENERIC_FILE_TYPE_DIR,
+        .fs = fs,
+        .pos = 0,
+        .current_buffer = 0,
+        .buffer_pos = 0,
+        .buffer_block_indices = { 2, root_inode->block[0], 0 },
+        .metadata_buffer = root_inode,
+        .buffers = { buffer, 0 },
+        .written_buffers = { 0 }
     };
 
     // Success!

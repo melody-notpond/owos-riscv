@@ -13,16 +13,27 @@ void kmain() {
     uart_puts("Finished initialisation.\n");
 
     // Mount root file system
-    generic_dir_t* dev = generic_dir_lookup_dir(root, "dev")->value.dir;
-    struct s_dir_entry* entry = generic_dir_lookup_dir(dev, "virt-blk7");
-    if (!mount_block_device(root, &entry->value.block)) {
-        uart_printf("Mounted root file system (/dev/%s)\n", entry->name);
+    generic_dir_t* dev = generic_dir_lookup_dir(root, "dev").value.dir;
+    struct s_dir_entry entry = generic_dir_lookup_dir(dev, "virt-blk7");
+    if (!mount_block_device(root, entry.value.block)) {
+        uart_printf("Mounted root file system (/dev/%s)\n", entry.name);
     } else {
         uart_puts("Failed to mount file system\n");
         while (1);
     }
 
+    struct s_dir_entry uwu = generic_dir_lookup_dir(root         , "uwu");
+    struct s_dir_entry nya = generic_dir_lookup_dir(uwu.value.dir, "nya");
+    struct s_dir_entry owo = generic_dir_lookup_dir(nya.value.dir, "owo");
+    generic_file_t* file = owo.value.file;
+    int c;
+    while ((c = generic_file_read_char(file)) != EOF) {
+        uart_putc(c);
+    }
+    uart_putc('\n');
+
     // Get test file
+    /*
     char* path[] = {"uwu", "nya", "owo"};
     ext2fs_mount_t* mount = (*root)->fs.mount;
     unsigned int inode = ext2_get_inode(mount, mount->root_inode, path, 3);
@@ -39,6 +50,7 @@ void kmain() {
     } else {
         uart_puts("File /uwu/nya/owo not found.\n");
     }
+    */
 
     // Hang
     while (1) {
