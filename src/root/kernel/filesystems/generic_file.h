@@ -26,6 +26,7 @@ typedef struct s_generic_filesystem {
 } generic_filesystem_t;
 
 typedef enum {
+    DIR_ENTRY_TYPE_UNUSED,
     DIR_ENTRY_TYPE_UNKNOWN,
     DIR_ENTRY_TYPE_DIR,
     DIR_ENTRY_TYPE_BLOCK,
@@ -38,17 +39,16 @@ struct s_dir_entry {
     dir_entry_type_t tag;
     union {
         struct s_generic_dir** dir;
-
         generic_block_t* block;
-
         generic_file_t* file;
     } value;
 };
 
 struct s_generic_dir {
+    char mountpoint;
     generic_filesystem_t fs;
     generic_file_t* value;
-    struct s_generic_dir** parent;
+    generic_dir_t* parent;
 
     // List of mounted file systems and directories that contain mounted file systems
     unsigned long long length;
@@ -59,6 +59,7 @@ struct s_generic_dir {
 struct s_generic_file {
     generic_file_type_t type;
     generic_filesystem_t* fs;
+    generic_dir_t* parent;
     unsigned long long pos;
     unsigned char current_buffer;
     unsigned long long buffer_pos;
@@ -88,6 +89,10 @@ char mount_block_device(generic_dir_t* dir, generic_block_t* block);
 // close_generic_file(generic_file_t*) -> void
 // Closes a generic file.
 void close_generic_file(generic_file_t* file);
+
+// cleanup_directory(generic_dir_t*) -> char
+// Cleans up a directory by shifting its contents to remove unused space and deallocating unused folders.
+char cleanup_directory(generic_dir_t* dir);
 
 // unmount_generic_dir(generic_dir_t* dir) -> char
 // Unmounts a generic directory. Returns 0 on success.

@@ -126,14 +126,20 @@ void dealloc_page(void* ptr) {
 // malloc(unsigned long int) -> void*
 // Allocates a small piece of memory
 void* malloc(unsigned long int n) {
+    // Don't allocate zero sized memory
     if (n == 0)
         return (void*) 0;
 
+    // Calculate size with padding
     unsigned long long size = n + sizeof(struct s_malloc_pointer_header);
-    struct s_malloc_pointer_header* ptr = &heap_bottom;
+    size = (size + 7) & ~7;
 
+    // Iterate until the end of the heap is reached
+    struct s_malloc_pointer_header* ptr = &heap_bottom;
     while (ptr + size < (struct s_malloc_pointer_header*) &pages_bottom) {
+        // Check if the current header is used
         if (!ptr->used && (ptr->size == 0 || n <= ptr->size)) {
+            // Update metadata
             if (ptr->size == 0)
                 ptr->size = n;
             if (ptr->next == 0)
@@ -142,14 +148,15 @@ void* malloc(unsigned long int n) {
             return ptr + 1;
         }
 
+        // Get next pointer
         if (ptr->next != 0)
             ptr = ptr->next;
         else break;
     }
 
+    // Error message on out of memory
     if (ptr >= (struct s_malloc_pointer_header*) &pages_bottom)
         uart_printf("[malloc] Out of memory!\nAttempted to load address 0x%p\n", ptr);
-
     return (void*) 0;
 }
 
@@ -161,8 +168,10 @@ void* realloc(void* ptr, unsigned long int n) {
         return ptr;
 
     void* new = malloc(n);
-    if (new == (void*) 0)
+    if (new == (void*) 0) {
+        free(ptr);
         return new;
+    }
 
     memcpy(new, ptr, header->size);
     free(ptr);
@@ -201,6 +210,8 @@ void* memcpy(void* dest, const void* src, unsigned long int n) {
     return dest;
 }
 
+// memset(void*, int, unsigned long int) -> void*
+// Sets a value over a space. Returns the original pointer.
 void* memset(void* p, int i, unsigned long int n) {
     unsigned char c = i;
     for (unsigned char* p1 = p; (void*) p1 < p + n; p1++) {
@@ -209,3 +220,19 @@ void* memset(void* p, int i, unsigned long int n) {
     return p;
 }
 
+// memsize() -> unsigned long long
+// Returns the size of the heap in bytes.
+unsigned long long memsize() {
+    return ((unsigned long long) &pages_bottom) - ((unsigned long long) &heap_bottom);
+}
+
+// memfree() -> unsigned long long
+// Returns the free space on the kernel heap.
+unsigned long long memfree() {
+    unsigned long long free = memsize();
+    for (struct s_malloc_pointer_header* p = &heap_bottom; p && (void*) p < (void*) &pages_bottom; p = p->next) {
+        if (p->used)
+            free -= p->size;
+    }
+    return free;
+}

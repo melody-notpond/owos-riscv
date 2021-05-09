@@ -11,6 +11,7 @@ generic_dir_t* root;
 
 void kmain() {
     uart_puts("Finished initialisation.\n");
+    uart_printf("Heap has 0x%llx bytes free.\n", memfree());
 
     // Mount root file system
     generic_dir_t* dev = generic_dir_lookup_dir(root, "dev").value.dir;
@@ -22,6 +23,7 @@ void kmain() {
         while (1);
     }
 
+    // Get test file
     struct s_dir_entry uwu = generic_dir_lookup_dir(root         , "uwu");
     struct s_dir_entry nya = generic_dir_lookup_dir(uwu.value.dir, "nya");
     struct s_dir_entry owo = generic_dir_lookup_dir(nya.value.dir, "owo");
@@ -31,26 +33,12 @@ void kmain() {
         uart_putc(c);
     }
     uart_putc('\n');
+    close_generic_file(file);
+    cleanup_directory(root);
+    unmount_generic_dir(root);
+    clean_virtio_block_devices();
 
-    // Get test file
-    /*
-    char* path[] = {"uwu", "nya", "owo"};
-    ext2fs_mount_t* mount = (*root)->fs.mount;
-    unsigned int inode = ext2_get_inode(mount, mount->root_inode, path, 3);
-
-    if (inode != 0) {
-        uart_puts("Found file /uwu/nya/owo\nContents of file:\n");
-        generic_file_t file = ext2_create_generic_regular_file(&(*root)->fs, inode);
-
-        int c;
-        while ((c = generic_file_read_char(&file)) != EOF) {
-            uart_putc(c);
-        }
-        uart_putc('\n');
-    } else {
-        uart_puts("File /uwu/nya/owo not found.\n");
-    }
-    */
+    uart_printf("Heap has 0x%llx bytes free.\n", memfree());
 
     // Hang
     while (1) {
@@ -63,6 +51,7 @@ void kinit() {
 
     // Initialise heap
     init_heap_metadata();
+    uart_printf("Heap has 0x%llx bytes.\n", memsize());
 
     // Initialise root and /dev file system
     root = init_generic_dir();
@@ -77,9 +66,11 @@ void kinit() {
         }
     });
 
+    uart_printf("uwu\nHeap has 0x%llx bytes.\n", memfree());
     // Probe for available virtio devices
     virtio_probe(dev);
 
+    uart_printf("Heap has 0x%llx bytes.\n", memfree());
     // Register file systems
     register_fs_mounter(ext2_mount);
 

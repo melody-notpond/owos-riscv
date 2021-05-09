@@ -33,9 +33,11 @@ char mount_block_device(generic_dir_t* dir, generic_block_t* block) {
     }
 
     if (!fail) {
+        file.parent = (void*) 0;
         (*dir)->fs = fs;
         (*dir)->value = malloc(sizeof(generic_file_t));
         *(*dir)->value = file;
+        (*dir)->mountpoint = 1;
     }
     return fail;
 }
@@ -52,21 +54,83 @@ void close_generic_file(generic_file_t* file) {
     for (unsigned int i = 0; i < BUFFER_COUNT; i++) {
         free(file->buffers[i]);
     }
+
+    // Remove entry from parent directory
+    if (file->parent) {
+        generic_dir_t parent = *file->parent;
+        for (unsigned long long i = 0; i < parent->length; i++) {
+            if (parent->entries[i].value.file == file) {
+                parent->entries[i].value.file = 0;
+                parent->entries[i].tag = DIR_ENTRY_TYPE_UNUSED;
+                free(parent->entries[i].name);
+                break;
+            }
+        }
+    }
+
     free(file);
+}
+
+// cleanup_directory(generic_dir_t*) -> char
+// Cleans up a directory by shifting its contents to remove unused space and deallocating unused folders.
+char cleanup_directory(generic_dir_t* dir) {
+    generic_dir_t d = *dir;
+    unsigned long long diff = 0;
+    for (unsigned long long i = 0; i < d->length; i++) {
+        if (d->entries[i].tag == DIR_ENTRY_TYPE_DIR && cleanup_directory(d->entries[i].value.dir)) {
+            d->entries[i].tag = DIR_ENTRY_TYPE_UNUSED;
+            free(d->entries[i].name);
+        }
+
+        if (d->entries[i].tag == DIR_ENTRY_TYPE_UNUSED) {
+            dir++;
+        } else {
+            d->entries[i - diff] = d->entries[i];
+        }
+    }
+
+    d->length -= diff;
+    if (d->length == 0 && !d->mountpoint) {
+        close_generic_file(d->value);
+        return 1;
+    }
+
+    return 0;
+}
+
+void recursive_remove_directories(generic_dir_t* dir) {
+    generic_dir_t d = *dir;
+
+    for (unsigned long long i = 0; i < d->length; i++) {
+        if (d->entries[i].tag != DIR_ENTRY_TYPE_UNUSED)
+            free(d->entries[i].name);
+
+        if (d->entries[i].tag == DIR_ENTRY_TYPE_DIR) {
+            recursive_remove_directories(d->entries[i].value.dir);
+        } else if (d->entries[i].tag == DIR_ENTRY_TYPE_REGULAR) {
+            close_generic_file(d->entries[i].value.file);
+        } else if (d->entries[i].tag == DIR_ENTRY_TYPE_BLOCK) {
+            free(d->entries[i].value.block);
+        }
+    }
+
+    close_generic_file(d->value);
+    free(*dir);
+    free(dir);
 }
 
 // unmount_generic_dir(generic_dir_t* dir) -> char
 // Unmounts a generic directory. Returns 0 on success.
 char unmount_generic_dir(generic_dir_t* dir) {
     generic_dir_t d = *dir;
-    if (d->fs.mount == 0)
+    if (d->fs.mount == 0 || !d->mountpoint)
         return 1;
 
     // TODO: check if the device is busy
 
     char status = d->fs.unmount(&d->fs, d->value);
     if (!status) {
-        close_generic_file(d->value);
+        recursive_remove_directories(dir);
         return 0;
     }
     return status;
@@ -78,11 +142,12 @@ generic_dir_t* init_generic_dir() {
     generic_dir_t* dir = malloc(sizeof(generic_dir_t));
     *dir = malloc(sizeof(struct s_generic_dir) + sizeof(struct s_dir_entry) * INITIAL_SIZE);
     **dir = (struct s_generic_dir) {
+        .mountpoint = 0,
         .fs = (generic_filesystem_t) { 0 },
         .value = (void*) 0,
         .parent = dir,
         .length = 0,
-        .size = INITIAL_SIZE,
+        .size = INITIAL_SIZE
     };
     return dir;
 }
@@ -92,14 +157,17 @@ generic_dir_t* init_generic_dir() {
 void generic_dir_append_entry(generic_dir_t* dir, struct s_dir_entry entry) {
     generic_dir_t d = *dir;
     if (d->length >= d->size) {
+        // Resize list
         unsigned long long size = d->size << 1;
         *dir = realloc(*dir, sizeof(struct s_generic_dir) + sizeof(struct s_dir_entry) * size);
         d = *dir;
         d->size = size;
     }
 
+    // Append entry
     d->entries[d->length++] = entry;
     if (entry.tag == DIR_ENTRY_TYPE_DIR) {
+        // Directories get their parents marked
         (*entry.value.dir)->parent = dir;
     }
 }
@@ -119,3 +187,4 @@ struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name) {
     // Lookup via file system driver
     return (*dir)->fs.lookup(dir, name);
 }
+

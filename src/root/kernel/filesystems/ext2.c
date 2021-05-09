@@ -322,6 +322,7 @@ struct s_dir_entry ext2_generic_dir_lookup(generic_dir_t* dir, char* name) {
     // Create generic file
     generic_file_t* file = malloc(sizeof(generic_file_t));
     *file = (generic_file_t) {
+        .parent = dir,
         .type = file_type,
         .fs = &d->fs,
         .pos = 0,
@@ -401,6 +402,7 @@ char ext2_unmount(generic_filesystem_t* fs, generic_file_t* root) {
     ext2fs_mount_t* mount = fs->mount;
     free(mount->superblock);
     free(mount->desc_table);
+    free(mount);
     root = root; // suppress warning (TODO: save state)
     return 0;
 }

@@ -206,3 +206,13 @@ void virtio_block_make_generic(unsigned char block_id, generic_dir_t* dev) {
     });
 }
 
+// clean_virtio_block_devices() -> void
+// Cleans up virtio block devices.
+void clean_virtio_block_devices() {
+    for (unsigned int i = 0; i < VIRTIO_DEVICE_COUNT; i++) {
+        virtio_block_device_t device = block_devices[i];
+        if (device.in_use) {
+            free((void*) device.queue);
+        }
+    }
+}

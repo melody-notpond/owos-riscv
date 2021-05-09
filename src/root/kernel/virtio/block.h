@@ -25,5 +25,8 @@ virtio_block_error_code_t virtio_block_write(unsigned char block_id, unsigned lo
 
 void virtio_block_make_generic(unsigned char block_id, generic_dir_t* dev);
 
+// clean_virtio_block_devices() -> void
+// Cleans up virtio block devices.
+void clean_virtio_block_devices();
 #endif /* KERNEL_VIRTIO_BLOCK_H */
 
