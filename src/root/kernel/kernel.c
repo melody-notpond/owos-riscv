@@ -7,14 +7,17 @@
 #include "virtio/virtio.h"
 #include "generic_block.h"
 
+#define ROOT_DISC "/dev/virt-blk7"
+
 generic_dir_t* root;
+char running = 1;
 
 void kmain() {
     uart_puts("Finished initialisation.\n");
     uart_printf("Heap has 0x%llx bytes free.\n", memfree());
 
     // Mount root file system
-    struct s_dir_entry entry = generic_dir_lookup(root, "/dev/virt-blk7");
+    struct s_dir_entry entry = generic_dir_lookup(root, ROOT_DISC);
     if (!mount_block_device(root, entry.value.block)) {
         uart_printf("Mounted root file system (/dev/%s)\n", entry.name);
     } else {
@@ -23,9 +26,9 @@ void kmain() {
     }
 
     // Get test file
-    struct s_dir_entry owo = generic_dir_lookup(root, "/../../././uwu/nya/owo");
-    if (owo.tag != 0) {
-        generic_file_t* file = owo.value.file;
+    struct s_dir_entry fstab = generic_dir_lookup(root, "/etc/fstab");
+    if (fstab.tag == DIR_ENTRY_TYPE_REGULAR) {
+        generic_file_t* file = fstab.value.file;
         int c;
         while ((c = generic_file_read_char(file)) != EOF) {
             uart_putc(c);
@@ -33,7 +36,14 @@ void kmain() {
         uart_putc('\n');
         close_generic_file(file);
     } else {
-        uart_puts("Could not find file /uwu/nya/owo\n");
+        if (fstab.tag == DIR_ENTRY_TYPE_DIR)
+            cleanup_directory(fstab.value.dir);
+        uart_puts("Could not find file /etc/fstab\n");
+    }
+
+    // Hang
+    while (running) {
+        uart_getc();
     }
 
     cleanup_directory(root);
@@ -41,11 +51,6 @@ void kmain() {
     clean_virtio_block_devices();
 
     uart_printf("Heap has 0x%llx bytes free.\n", memfree());
-
-    // Hang
-    while (1) {
-        uart_getc();
-    }
 }
 
 void kinit() {
@@ -68,12 +73,8 @@ void kinit() {
         }
     });
 
-    uart_printf("uwu\nHeap has 0x%llx bytes.\n", memfree());
-
     // Probe for available virtio devices
     virtio_probe(dev);
-
-    uart_printf("Heap has 0x%llx bytes.\n", memfree());
 
     // Register file systems
     register_fs_mounter(ext2_mount);

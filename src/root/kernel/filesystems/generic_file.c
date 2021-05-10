@@ -235,6 +235,7 @@ struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path) {
         }
     }
 
+    path_buffer[i] = 0;
     if (path_buffer[0] != 0) {
         entry = generic_dir_lookup_dir(dir, path_buffer);
     }
