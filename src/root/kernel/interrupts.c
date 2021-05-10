@@ -1,3 +1,4 @@
+#include "syscall.h"
 #include "uart.h"
 
 //#define INTERRUPT_DEBUG
@@ -64,10 +65,13 @@ void handle_interrupt(unsigned long long mcause) {
 
     // Synchronous interrupts
     } else {
-        uart_puts("synchronous interrupt: 0x");
-        uart_printf("%llx\n", mcause);
         switch (mcause) {
+            // User mode syscall
+            case 0x08:
+                user_syscall(0);
+                break;
             default:
+                uart_printf("unknown synchronous interrupt: 0x%llx\n", mcause);
                 break;
         }
         while (1);

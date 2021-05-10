@@ -1,6 +1,7 @@
 #include "filesystems/ext2.h"
 #include "filesystems/generic_file.h"
 #include "memory.h"
+#include "process.h"
 #include "string.h"
 #include "uart.h"
 #include "virtio/block.h"
@@ -19,13 +20,13 @@ void kmain() {
     // Mount root file system
     struct s_dir_entry entry = generic_dir_lookup(root, ROOT_DISC);
     if (!mount_block_device(root, entry.value.block)) {
-        uart_printf("Mounted root file system (/dev/%s)\n", entry.name);
+        uart_puts("Mounted root file system (" ROOT_DISC ")\n");
     } else {
         uart_puts("Failed to mount file system\n");
         while (1);
     }
 
-    // Get test file
+    // Get /etc/fstab
     struct s_dir_entry fstab = generic_dir_lookup(root, "/etc/fstab");
     if (fstab.tag == DIR_ENTRY_TYPE_REGULAR) {
         generic_file_t* file = fstab.value.file;
@@ -59,6 +60,9 @@ void kinit() {
     // Initialise heap
     init_heap_metadata();
     uart_printf("Heap has 0x%llx bytes.\n", memsize());
+
+    // Initialise process table
+    init_process_table();
 
     // Initialise root and /dev file system
     root = init_generic_dir();
