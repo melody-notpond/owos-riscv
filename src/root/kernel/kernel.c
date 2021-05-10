@@ -23,7 +23,7 @@ void kmain() {
     }
 
     // Get test file
-    struct s_dir_entry owo = generic_dir_lookup(root, "/uwu/nya/owo");
+    struct s_dir_entry owo = generic_dir_lookup(root, "/../../././uwu/nya/owo");
     if (owo.tag != 0) {
         generic_file_t* file = owo.value.file;
         int c;

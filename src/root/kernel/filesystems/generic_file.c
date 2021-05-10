@@ -177,6 +177,24 @@ void generic_dir_append_entry(generic_dir_t* dir, struct s_dir_entry entry) {
 // generic_dir_lookup_dir(generic_dir_t*, char*) -> struct s_dir_entry*
 // Returns an entry with the same name if found. Returns a zeroed out structure if not found.
 struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name) {
+    // Check for . and ..
+    if (!strcmp(name, "."))
+        return (struct s_dir_entry) {
+            .tag = DIR_ENTRY_TYPE_DIR,
+            .name = ".",
+            .value = {
+                .dir = dir
+            }
+        };
+    else if (!strcmp(name, ".."))
+        return (struct s_dir_entry) {
+            .tag = DIR_ENTRY_TYPE_DIR,
+            .name = "..",
+            .value = {
+                .dir = (*dir)->parent
+            }
+        };
+
     // Check cached entries first
     struct s_dir_entry* entries = (*dir)->entries;
     unsigned long long length = (*dir)->length;
