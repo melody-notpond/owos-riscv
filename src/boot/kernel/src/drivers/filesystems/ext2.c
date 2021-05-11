@@ -275,10 +275,6 @@ int ext2_generic_file_read_char(generic_file_t* file) {
     if (inode == (void*) 0)
         return EOF;
 
-    // Return EOF if the current position is past the size of the file
-    if (file->pos >= (inode->size | ((unsigned long long) inode->dir_acl) << 32))
-        return EOF;
-
     // Get some useful metadata
     ext2fs_mount_t* mount = file->fs->mount;
     unsigned long long block_size = 1024 << mount->superblock->log_block_size;
@@ -291,8 +287,27 @@ int ext2_generic_file_read_char(generic_file_t* file) {
     file->pos++;
     file->buffer_pos++;
     if (file->buffer_pos >= block_size) {
-        // TODO: get next buffer
-        return EOF;
+        // Update index
+        file->buffer_pos = 0;
+        file->current_buffer++;
+        if (file->current_buffer >= BUFFER_COUNT - 3)
+            file->current_buffer = 0;
+
+        if (file->buffers[file->current_buffer] == (void*) 0)
+            file->buffers[file->current_buffer] = malloc(block_size);
+
+        unsigned long long block = file->pos / block_size;
+        unsigned long long block_id = 0;
+
+        // Direct blocks
+        if (block < INODE_DIRECT_COUNT)
+            block_id = inode->block[block];
+
+        // TODO: indirect blocks
+        else return EOF;
+
+        // Get block
+        ext2fs_load_block(mount->block, mount->superblock, block_id, file->buffers[file->current_buffer]);
     }
 
     return c;
@@ -349,7 +364,6 @@ struct s_dir_entry ext2_generic_dir_lookup(generic_dir_t* dir, char* name) {
     } else {
         entry.value.file = file;
     }
-    generic_dir_append_entry(dir, entry);
 
     return entry;
 }
@@ -407,6 +421,11 @@ char ext2_unmount(generic_filesystem_t* fs, generic_file_t* root) {
     return 0;
 }
 
+unsigned long long ext2_file_size(generic_file_t* file) {
+    ext2fs_inode_t* inode = file->metadata_buffer;
+    return ((inode->mode & 0xf000) == INODE_FILE_REGULAR ? (unsigned long long) inode->dir_acl : 0) << 32 | (unsigned long long) inode->size;
+}
+
 // ext2_mount(generic_block_t*, generic_filesystem_t*, generic_file_t*) -> char
 // Mounts an ext2 file system from a generic block device. Returns 0 on success.
 char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t* root) {
@@ -443,7 +462,8 @@ char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t
         .mount = mount,
         .unmount = ext2_unmount,
         .read_char = ext2_generic_file_read_char,
-        .lookup = ext2_generic_dir_lookup
+        .lookup = ext2_generic_dir_lookup,
+        .size = ext2_file_size
     };
 
     // Get first buffer

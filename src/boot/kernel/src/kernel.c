@@ -29,6 +29,9 @@ void kmain() {
     // Get /etc/fstab
     struct s_dir_entry fstab = generic_dir_lookup(root, "/etc/fstab");
     if (fstab.tag == DIR_ENTRY_TYPE_REGULAR) {
+        // Put the contents of fstab on the UART port
+        // TODO: do fstab-y things
+        uart_puts("Found /etc/fstab:\n");
         generic_file_t* file = fstab.value.file;
         int c;
         while ((c = generic_file_read_char(file)) != EOF) {
@@ -40,6 +43,22 @@ void kmain() {
         if (fstab.tag == DIR_ENTRY_TYPE_DIR)
             cleanup_directory(fstab.value.dir);
         uart_puts("Could not find file /etc/fstab\n");
+    }
+
+    // Load /bin/simple
+    struct s_dir_entry simple = generic_dir_lookup(root, "/bin/simple");
+    if (simple.tag == DIR_ENTRY_TYPE_REGULAR) {
+        uart_puts("Found /bin/simple:\n");
+        generic_file_t* file = simple.value.file;
+        int c;
+        while ((c = generic_file_read_char(file)) != EOF) {
+            uart_putc(c);
+        }
+        close_generic_file(file);
+    } else {
+        if (simple.tag == DIR_ENTRY_TYPE_DIR)
+            cleanup_directory(simple.value.dir);
+        uart_puts("Could not find file /bin/simple\n");
     }
 
     // Hang

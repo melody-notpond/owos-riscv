@@ -205,7 +205,14 @@ struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name) {
     }
 
     // Lookup via file system driver
-    return (*dir)->fs.lookup(dir, name);
+    struct s_dir_entry entry = (*dir)->fs.lookup(dir, name);
+    if (entry.tag == DIR_ENTRY_TYPE_REGULAR)
+        entry.value.file->fs = &(*dir)->fs;
+    else if (entry.tag == DIR_ENTRY_TYPE_DIR) {
+        (*entry.value.dir)->fs = (*dir)->fs;
+        generic_dir_append_entry(dir, entry);
+    }
+    return entry;
 }
 
 // generic_dir_lookup(generic_dir_t*, char*) -> struct s_dir_entry

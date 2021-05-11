@@ -23,6 +23,7 @@ typedef struct s_generic_filesystem {
     char (*unmount)(struct s_generic_filesystem*, generic_file_t*);
     int (*read_char)(generic_file_t*);
     struct s_dir_entry (*lookup)(generic_dir_t*, char*);
+    unsigned long long (*size)(generic_file_t* file);
 } generic_filesystem_t;
 
 typedef enum {
@@ -69,10 +70,16 @@ struct s_generic_file {
     unsigned char written_buffers[(BUFFER_COUNT + 1) / 8];
 };
 
+// generic_file_size(generic_file_t* file) -> unsigned long long
+// Returns the size of the file.
+static inline unsigned long long generic_file_size(generic_file_t* file) {
+    return file->fs->size(file);
+}
+
 // generic_file_read_char(generic_file_t*) -> int
 // Reads a character from a file, returning EOF if no more characters are available.
 static inline int generic_file_read_char(generic_file_t* file) {
-    if (file->type == GENERIC_FILE_TYPE_REGULAR)
+    if (file->type == GENERIC_FILE_TYPE_REGULAR && generic_file_size(file) > file->pos)
         return file->fs->read_char(file);
     else
         return EOF;
