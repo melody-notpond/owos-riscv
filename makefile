@@ -2,7 +2,7 @@ CODE=src/
 EMU=qemu-system-riscv64
 EFLAGS=-machine virt -m 256m -nographic -device virtio-blk-device,scsi=off,drive=foo -bios none -global virtio-mmio.force-legacy=false -device virtio-gpu-device -s #-S
 
-all: kernel
+all: mount
 
 run:
 	$(EMU) $(EFLAGS) -kernel build/boot/kernel -drive if=none,format=raw,file=build/drive.iso,id=foo
@@ -19,7 +19,7 @@ mount: iso
 	sudo umount mnt
 
 kernel:
-	cd $(CODE)boot/kernel/ && make
+	cd $(CODE)boot/kernel/ && $(MAKE)
 	mkdir -p build/boot
 	mv $(CODE)boot/kernel/kernel build/boot/
 
@@ -29,5 +29,5 @@ etc:
 
 clean:
 	-rm -r obj/ build/
-	-cd src/boot/kernel && make clean
+	-cd src/boot/kernel && $(MAKE) clean
 
