@@ -115,17 +115,17 @@ void clean_mmu_mappings(mmu_level_1_t* top) {
     if (top == (void*) 0)
         return;
 
-    for (int i = 0; i < PAGE_SIZE / sizeof(void*); i++) {
+    for (int i = 0; i < (int) (PAGE_SIZE / sizeof(void*)); i++) {
         mmu_level_2_t* level2 = MMU_UNWRAP(2, top[i]);
         if (level2 == (void*) 0)
             continue;
 
-        for (int j = 0; j < PAGE_SIZE / sizeof(void*); j++) {
+        for (int j = 0; j < (int) (PAGE_SIZE / sizeof(void*)); j++) {
             mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[j]);
             if (level3 == (void*) 0)
                 continue;
 
-            for (int k = 0; k < PAGE_SIZE / sizeof(void*); k++) {
+            for (int k = 0; k < (int) (PAGE_SIZE / sizeof(void*)); k++) {
                 if (level3[k].addr & 0x100) {
                     void* physical = (void*) ((level3[k].addr ^ level3[k].flags) << 2);
                     dealloc_page(physical);

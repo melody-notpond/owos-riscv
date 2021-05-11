@@ -1,7 +1,7 @@
 #include "ext2.h"
-#include "../memory.h"
-#include "../string.h"
-#include "../uart.h"
+#include "../../lib/memory.h"
+#include "../../lib/string.h"
+#include "../uart/uart.h"
 
 #define INODE_DIRECT_COUNT 12
 #define INODE_SINGLE_INDIRECT 12

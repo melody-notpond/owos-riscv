@@ -1,5 +1,5 @@
-#include "../memory.h"
-#include "../uart.h"
+#include "../../lib/memory.h"
+#include "../uart/uart.h"
 #include "virtqueue.h"
 
 // virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int) -> volatile virtio_queue_t*

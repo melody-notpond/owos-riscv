@@ -1,6 +1,6 @@
 #include "gpu.h"
-#include "../memory.h"
-#include "../uart.h"
+#include "../../lib/memory.h"
+#include "../uart/uart.h"
 #include "virtqueue.h"
 
 // virtio_init_graphics_device(volatile virtio_mmio_t*) -> char

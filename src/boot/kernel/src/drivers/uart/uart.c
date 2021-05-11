@@ -1,6 +1,6 @@
 #include <stdarg.h>
 
-#include "printf.h"
+#include "../../lib/printf.h"
 #include "uart.h"
 
 // uart_printf(char*, ...) -> void

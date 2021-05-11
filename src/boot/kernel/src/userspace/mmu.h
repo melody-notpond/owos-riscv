@@ -1,7 +1,7 @@
 #ifndef KERNEL_MMU_H
 #define KERNEL_MMU_H
 
-#include "memory.h"
+#include "../lib/memory.h"
 
 #define MMU_UNWRAP(t, a) ((mmu_level_##t##_t*) (((unsigned long long) a.addr) ^ ((unsigned long long) a.flags)))
 

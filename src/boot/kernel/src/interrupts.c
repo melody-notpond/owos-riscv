@@ -1,5 +1,5 @@
-#include "syscall.h"
-#include "uart.h"
+#include "userspace/syscall.h"
+#include "drivers/uart/uart.h"
 
 //#define INTERRUPT_DEBUG
 #define PLIC_BASE  0x0c000000

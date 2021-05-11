@@ -1,5 +1,5 @@
 #include "memory.h"
-#include "uart.h"
+#include "../drivers/uart/uart.h"
 
 // TODO: figure out how to make this dependent on how much memory is detected
 #define HEAP_SIZE 0x100000

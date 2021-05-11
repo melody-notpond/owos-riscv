@@ -1,5 +1,5 @@
 #include "syscall.h"
-#include "uart.h"
+#include "../drivers/uart/uart.h"
 
 // user_syscall(unsigned long long) -> void
 // Does a syscall for a user mode process.

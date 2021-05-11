@@ -1,8 +1,8 @@
 #include "block.h"
-#include "../interrupts.h"
-#include "../memory.h"
-#include "../string.h"
-#include "../uart.h"
+#include "../../interrupts.h"
+#include "../../lib/memory.h"
+#include "../../lib/string.h"
+#include "../uart/uart.h"
 
 typedef struct __attribute__((__packed__, aligned(1))) { 
     unsigned long long capacity; 

@@ -1,6 +1,6 @@
 #include "block.h"
 #include "gpu.h"
-#include "../uart.h"
+#include "../uart/uart.h"
 #include "virtio.h"
 
 #define VIRTIO_MAGIC 0x74726976

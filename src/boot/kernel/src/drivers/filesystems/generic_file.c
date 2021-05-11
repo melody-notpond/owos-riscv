@@ -1,6 +1,6 @@
 #include "generic_file.h"
-#include "../memory.h"
-#include "../string.h"
+#include "../../lib/memory.h"
+#include "../../lib/string.h"
 
 #define INITIAL_SIZE 8
 #define MOUNT_FUNC_COUNT 64

@@ -1,4 +1,4 @@
-#include "memory.h"
+#include "../lib/memory.h"
 #include "process.h"
 
 pid_t MAX_PID = 10000;
