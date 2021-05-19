@@ -250,3 +250,16 @@ struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path) {
     free(path_buffer);
     return entry;
 }
+
+// generic_file_read(generic_file_t*, void*, unsigned long long) -> void
+// Reads binary data from a file.
+void generic_file_read(generic_file_t* file, void* buffer, unsigned long long size) {
+    char* p = buffer;
+    for (unsigned long long i = 0; i < size; i++) {
+        int c;
+        if ((c = generic_file_read_char(file)) == EOF)
+            break;
+        if (p != (void*) 0)
+            p[i] = c;
+    }
+}

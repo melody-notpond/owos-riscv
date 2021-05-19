@@ -1,6 +1,7 @@
 #include "drivers/filesystems/ext2.h"
 #include "drivers/filesystems/generic_file.h"
 #include "lib/memory.h"
+#include "userspace/elffile.h"
 #include "userspace/process.h"
 #include "lib/string.h"
 #include "drivers/uart/uart.h"
@@ -46,20 +47,7 @@ void kmain() {
     }
 
     // Load /bin/simple
-    struct s_dir_entry simple = generic_dir_lookup(root, "/bin/simple");
-    if (simple.tag == DIR_ENTRY_TYPE_REGULAR) {
-        uart_puts("Found /bin/simple:\n");
-        generic_file_t* file = simple.value.file;
-        int c;
-        while ((c = generic_file_read_char(file)) != EOF) {
-            uart_putc(c);
-        }
-        close_generic_file(file);
-    } else {
-        if (simple.tag == DIR_ENTRY_TYPE_DIR)
-            cleanup_directory(simple.value.dir);
-        uart_puts("Could not find file /bin/simple\n");
-    }
+    load_executable_elf_from_file(root, "/bin/simple");
 
     // Hang
     while (running) {
