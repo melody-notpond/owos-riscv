@@ -14,21 +14,52 @@ enum {
 };
 
 typedef struct __attribute__((packed, aligned(2))) {
+    // Identifier stuff
     unsigned char ident[16];
+
+    // The type of the object file
     unsigned short type;
+
+    // The machine architecture the elf file is fore
     unsigned short machine;
+
+    // The version of the elf file (must be 1)
     unsigned int version;
+
+    // The entry point of the program
     unsigned int entry;
+
+    // The program header offset, zero if nonexistent
     unsigned int program_header_offset;
+
+    // The section header offset, zero if nonexistent
     unsigned int section_header_offset;
+
+    // Machine architecture flags
     unsigned int flags;
+
+    // The size of the elf header
     unsigned short elf_header_size;
+
+    // The size of one program header entry
     unsigned short program_header_entry_size;
+
+    // The number of program headers
     unsigned short program_header_num;
+
+    // The size of a section header entry
     unsigned short section_header_entry_size;
+
+    // The number of section headers
     unsigned short section_header_num;
+
+    // The section header index associated with the string table
     unsigned short section_header_string_table_index;
 } elf_header_t;
+
+typedef struct __attribute__((packed, aligned(2))) {
+    
+} elf_section_header_t;
 
 typedef struct __attribute__((packed, aligned(2))) {
 } elf_section_header_table;

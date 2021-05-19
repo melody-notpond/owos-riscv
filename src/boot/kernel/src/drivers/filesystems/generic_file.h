@@ -23,7 +23,8 @@ typedef struct s_generic_filesystem {
     char (*unmount)(struct s_generic_filesystem*, generic_file_t*);
     int (*read_char)(generic_file_t*);
     struct s_dir_entry (*lookup)(generic_dir_t*, char*);
-    unsigned long long (*size)(generic_file_t* file);
+    unsigned long long (*size)(generic_file_t*);
+    void (*seek)(generic_file_t*, unsigned long long);
 } generic_filesystem_t;
 
 typedef enum {
@@ -64,6 +65,7 @@ struct s_generic_file {
     unsigned long long pos;
     unsigned char current_buffer;
     unsigned long long buffer_pos;
+    unsigned long long buffer_indices[BUFFER_COUNT];
     unsigned long long buffer_block_indices[BUFFER_COUNT + 1];
     void* metadata_buffer;
     void* buffers[BUFFER_COUNT];
@@ -83,6 +85,16 @@ static inline int generic_file_read_char(generic_file_t* file) {
         return file->fs->read_char(file);
     else
         return EOF;
+}
+
+static inline void generic_file_seek(generic_file_t* file, unsigned long long pos) {
+    unsigned long long size = generic_file_size(file);
+    if (pos >= size) {
+        file->pos = size;
+        return;
+    }
+
+    file->fs->seek(file, pos);
 }
 
 // register_fs_mounter(char (*)(generic_block_t*, generic_filesystem_t*, generic_file_t*)) -> void

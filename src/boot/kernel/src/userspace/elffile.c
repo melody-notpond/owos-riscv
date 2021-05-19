@@ -62,6 +62,7 @@ void load_executable_elf_from_file(generic_dir_t* dir, char* path) {
     // Check if for RISC V
     if (elf.machine != ELF_MACHINE_RISCV) {
         uart_puts("Elf file is for an architecture other than RISC V\n");
+        close_generic_file(file);
         return;
     }
     uart_puts("Elf is for RISC V\n");
@@ -69,6 +70,7 @@ void load_executable_elf_from_file(generic_dir_t* dir, char* path) {
     // Check if the version is valid
     if (elf.version != 1) {
         uart_puts("Elf file is of invalid version\n");
+        close_generic_file(file);
         return;
     }
     uart_puts("Elf is version 1\n");
