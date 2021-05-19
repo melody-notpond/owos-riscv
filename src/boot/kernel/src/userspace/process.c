@@ -1,4 +1,5 @@
 #include "../lib/memory.h"
+#include "elffile.h"
 #include "process.h"
 
 pid_t MAX_PID = 10000;
@@ -22,7 +23,7 @@ pid_t spawn_process(pid_t parent_pid) {
             .parent_pid = parent_pid,
             .state = PROCESS_STATE_WAIT,
             .mmu_data = (void*) 0,
-            .pc = 0x80000000,
+            .pc = 0,
             .xs = { 0 },
             .fs = { 0.0 }
         };
@@ -38,7 +39,7 @@ pid_t spawn_process(pid_t parent_pid) {
                 .parent_pid = parent_pid,
                 .state = PROCESS_STATE_WAIT,
                 .mmu_data = (void*) 0,
-                .pc = 0x80000000,
+                .pc = 0,
                 .xs = { 0 },
                 .fs = { 0.0 }
             };
@@ -47,5 +48,45 @@ pid_t spawn_process(pid_t parent_pid) {
     }
 
     return -1;
+}
+
+// fetch_process(pid_t) -> process_t*
+// Fetches a process from the process table.
+process_t* fetch_process(pid_t pid) {
+    return &process_table[pid];
+}
+
+// load_elf_as_process(pid_t, elf_t*) -> pid_t
+// Uses an elf file as a process.
+pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_count) {
+    pid_t pid = spawn_process(parent_pid);
+    process_t* process = fetch_process(pid);
+    process->mmu_data = create_mmu_top();
+
+    void* last_pointer = 0;
+    for (int i = 0; i < elf->header.program_header_num; i++) {
+        int j;
+        void* ptr = (void*) elf->program_headers[i].virtual_address;
+        for (j = 0; j < elf->program_headers[i].file_size; j += MMU_PAGE_SIZE) {
+            void* page = alloc_page_mmu(process->mmu_data, ptr, MMU_FLAG_EXEC | MMU_FLAG_READ);
+            unsigned long long size = elf->program_headers[i].file_size - j;
+            memcpy(page, elf->data[i] + j, size < MMU_PAGE_SIZE ? size : MMU_PAGE_SIZE);
+            ptr += MMU_PAGE_SIZE;
+        }
+
+        if (last_pointer < ptr)
+            last_pointer = ptr;
+    }
+
+    for (unsigned int i = 0; i < stack_page_count; i++) {
+        alloc_page_mmu(process->mmu_data, last_pointer, MMU_FLAG_READ | MMU_FLAG_WRITE);
+        last_pointer += MMU_PAGE_SIZE;
+    }
+
+    process->pc = elf->header.entry;
+    process->xs[PROCESS_REGISTER_SP] = (unsigned long long) last_pointer;
+    process->xs[PROCESS_REGISTER_FP] = (unsigned long long) last_pointer;
+
+    return pid;
 }
 

@@ -26,7 +26,7 @@ void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
     i = (((unsigned long long) level2) & 0x003fe00000) >> 21;
     if (level2[i].addr == (void*) 0) {
         level2[i].addr = alloc_page(1);
-        level2[i].flags = (0b00010001 & flags) | 1;
+        level2[i].flags = (0b00010001 & flags) | MMU_FLAG_VALID;
     }
 
     // Set address
@@ -37,7 +37,7 @@ void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
     // In addition to the flags provided by the standard, the 8th and 9th bits are reserved for software use
     // In our case, the 8th bit is used to keep track of whether the memory location was allocated with alloc_page().
     level3[i].addr &= ~0x100;
-    level3[i].flags = (0b00011111 & flags) | 1;
+    level3[i].flags = (0b00011111 & flags) | MMU_FLAG_VALID;
 }
 
 // alloc_page_mmu(mmu_level_1_t*, void*, char) -> void*
@@ -53,7 +53,7 @@ void* alloc_page_mmu(mmu_level_1_t* top, void* virtual, char flags) {
     unsigned long long i = (((unsigned long long) virtual) & 0x7fb0000000) >> 30;
     if (top[i].addr == (void*) 0) {
         top[i].addr = alloc_page(1);
-        top[i].flags = (0b00010001 & flags) | 1;
+        top[i].flags = (0b00010001 & flags) | MMU_FLAG_VALID;
     }
 
     // Level 2 to level 3
@@ -61,7 +61,7 @@ void* alloc_page_mmu(mmu_level_1_t* top, void* virtual, char flags) {
     i = (((unsigned long long) level2) & 0x003fe00000) >> 21;
     if (level2[i].addr == (void*) 0) {
         level2[i].addr = alloc_page(1);
-        level2[i].flags = (0b00010001 & flags) | 1;
+        level2[i].flags = (0b00010001 & flags) | MMU_FLAG_VALID;
     }
 
     // Set address
@@ -72,7 +72,7 @@ void* alloc_page_mmu(mmu_level_1_t* top, void* virtual, char flags) {
     // In addition to the flags provided by the standard, the 8th and 9th bits are reserved for software use
     // In our case, the 8th bit is used to keep track of whether the memory location was allocated with alloc_page().
     level3[i].addr |= 0x100;
-    level3[i].flags = (0b00011111 & flags) | 1;
+    level3[i].flags = (0b00011111 & flags) | MMU_FLAG_VALID;
     return physical;
 }
 

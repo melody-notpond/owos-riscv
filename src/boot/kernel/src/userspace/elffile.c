@@ -46,7 +46,6 @@ elf_t load_executable_elf_from_file(generic_dir_t* dir, char* path) {
 
     // Check if executable
     if (header.type != ELF_TYPE_EXECUTABLE) {
-        uart_puts("Elf file is not executable\n");
         close_generic_file(file);
         return (elf_t) { 0 };
     }

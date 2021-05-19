@@ -4,6 +4,17 @@
 #include "../lib/memory.h"
 
 #define MMU_UNWRAP(t, a) ((mmu_level_##t##_t*) (((unsigned long long) a.addr) ^ ((unsigned long long) a.flags)))
+#define MMU_PAGE_SIZE 4096
+
+// Flags
+#define MMU_FLAG_VALID      0b00000001
+#define MMU_FLAG_READ       0b00000010
+#define MMU_FLAG_WRITE      0b00000100
+#define MMU_FLAG_EXEC       0b00001000
+#define MMU_FLAG_USER       0b00010000
+#define MMU_FLAG_GLOBAL     0b00100000
+#define MMU_FLAG_ACCESSED   0b01000000
+#define MMU_FLAG_DIRTY      0b10000000
 
 typedef union {
     char flags;
