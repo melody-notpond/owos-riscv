@@ -27,13 +27,13 @@ typedef struct __attribute__((packed, aligned(2))) {
     unsigned int version;
 
     // The entry point of the program
-    unsigned int entry;
+    unsigned long long entry;
 
-    // The program header offset, zero if nonexistent
-    unsigned int program_header_offset;
+    // The program header offset from the beginning of the file, zero if nonexistent
+    unsigned long long program_header_offset;
 
-    // The section header offset, zero if nonexistent
-    unsigned int section_header_offset;
+    // The section header offset from the beginning of the file, zero if nonexistent
+    unsigned long long section_header_offset;
 
     // Machine architecture flags
     unsigned int flags;
@@ -57,16 +57,42 @@ typedef struct __attribute__((packed, aligned(2))) {
     unsigned short section_header_string_table_index;
 } elf_header_t;
 
-typedef struct __attribute__((packed, aligned(2))) {
-    
-} elf_section_header_t;
+typedef struct {
+    // The type of the program header
+    unsigned int type;
 
-typedef struct __attribute__((packed, aligned(2))) {
-} elf_section_header_table;
+    // Flags for the header
+    unsigned int flags;
 
-// load_executable_elf_from_file(generic_dir_t*, char*) -> void
+    // Where the segment is relative to the beginning of the file
+    unsigned long long offset;
+
+    unsigned long long virtual_address;
+    unsigned long long physical_address;
+
+    // The size of the segment on the file
+    unsigned long long file_size;
+
+    // The size of the segment in memory
+    unsigned long long mem_size;
+
+    // The alignment with which the segment must be placed in memory
+    unsigned long long align;
+} elf_program_header_t;
+
+typedef struct {
+    elf_header_t header;
+    elf_program_header_t* program_headers;
+    void** data;
+} elf_t;
+
+// load_executable_elf_from_file(generic_dir_t*, char*) -> elf_t
 // Loads an elf file from disk.
-void load_executable_elf_from_file(generic_dir_t* dir, char* path);
+elf_t load_executable_elf_from_file(generic_dir_t* dir, char* path);
+
+// free_elf(elf_t*) -> void
+// Frees memory associated with an elf structure.
+void free_elf(elf_t* elf);
 
 #endif /* KERNEL_ELF_FILE_H */
 

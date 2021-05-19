@@ -92,7 +92,8 @@ static inline void generic_file_seek(generic_file_t* file, unsigned long long po
     if (pos >= size) {
         file->pos = size;
         return;
-    }
+    } else if (pos == file->pos)
+        return;
 
     file->fs->seek(file, pos);
 }

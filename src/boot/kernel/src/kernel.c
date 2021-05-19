@@ -47,7 +47,9 @@ void kmain() {
     }
 
     // Load /bin/simple
-    load_executable_elf_from_file(root, "/bin/simple");
+    elf_t simple = load_executable_elf_from_file(root, "/bin/simple");
+    uart_put_hexdump(simple.data[0], simple.program_headers[0].file_size);
+    free_elf(&simple);
 
     // Hang
     while (running) {

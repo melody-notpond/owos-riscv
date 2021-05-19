@@ -1,82 +1,103 @@
 #include "elffile.h"
-#include "../drivers/uart/uart.h"
+#include "../lib/memory.h"
 
 #define ELF_MACHINE_RISCV 0xf3
 #define ELF_CLASS_64 2
 #define ELF_DATA_LIL_ENDIAN 1
 
-// load_executable_elf_from_file(generic_dir_t*, char*) -> void
-// Loads an elf file from disk.
-void load_executable_elf_from_file(generic_dir_t* dir, char* path) {
+// load_executable_elf_from_file(generic_dir_t*, char*) -> elf_t
+// Loads an header file from disk.
+elf_t load_executable_elf_from_file(generic_dir_t* dir, char* path) {
     struct s_dir_entry entry = generic_dir_lookup(dir, path);
     if (entry.tag != DIR_ENTRY_TYPE_REGULAR)
-        return;
+        return (elf_t) { 0 };
 
     // When the impostor is sus!
     generic_file_t* file = entry.value.file;
-    uart_printf("Found %s\n", path);
 
-    // Read elf header
-    elf_header_t elf;
-    generic_file_read(file, &elf, sizeof(elf));
+    // Read header header
+    elf_header_t header;
+    generic_file_read(file, &header, sizeof(elf_header_t));
 
     // Check magic number
-    if (!(elf.ident[0] == 0x7f && elf.ident[1] == 'E' && elf.ident[2] == 'L' && elf.ident[3] == 'F')) {
-        uart_puts("Elf magic number not found\n");
+    if (!(header.ident[0] == 0x7f && header.ident[1] == 'E' && header.ident[2] == 'L' && header.ident[3] == 'F')) {
         close_generic_file(file);
-        return;
+        return (elf_t) { 0 };
     }
-    uart_puts("Elf magic number found!\n");
 
     // Check if 64 bit
-    if (elf.ident[4] != ELF_CLASS_64) {
-        uart_puts("Elf is not 64 bit\n");
+    if (header.ident[4] != ELF_CLASS_64) {
         close_generic_file(file);
-        return;
+        return (elf_t) { 0 };
     }
-    uart_puts("Elf file is 64 bit\n");
 
     // Check endianness
-    if (elf.ident[5] != ELF_DATA_LIL_ENDIAN) {
-        // TODO: support big endian elf files
-        uart_puts("Big endian elf files are currently unsupported\n");
+    if (header.ident[5] != ELF_DATA_LIL_ENDIAN) {
+        // TODO: support big endian header files
         close_generic_file(file);
-        return;
+        return (elf_t) { 0 };
     }
 
-    // Check elf version
-    if (elf.ident[6] != 1) {
-        uart_puts("Elf version is invalid");
+    // Check header version
+    if (header.ident[6] != 1) {
         close_generic_file(file);
-        return;
+        return (elf_t) { 0 };
     }
 
     // Check if executable
-    if (elf.type != ELF_TYPE_EXECUTABLE) {
+    if (header.type != ELF_TYPE_EXECUTABLE) {
         uart_puts("Elf file is not executable\n");
         close_generic_file(file);
-        return;
+        return (elf_t) { 0 };
     }
-    uart_puts("Elf is executable\n");
 
     // Check if for RISC V
-    if (elf.machine != ELF_MACHINE_RISCV) {
-        uart_puts("Elf file is for an architecture other than RISC V\n");
+    if (header.machine != ELF_MACHINE_RISCV) {
         close_generic_file(file);
-        return;
+        return (elf_t) { 0 };
     }
-    uart_puts("Elf is for RISC V\n");
 
     // Check if the version is valid
-    if (elf.version != 1) {
-        uart_puts("Elf file is of invalid version\n");
+    if (header.version != 1) {
         close_generic_file(file);
-        return;
+        return (elf_t) { 0 };
     }
-    uart_puts("Elf is version 1\n");
 
-    
+    // Create elf file structure
+    elf_t elf = { 0 };
+    elf.header = header;
+    elf.program_headers = malloc(header.program_header_num * sizeof(elf_program_header_t));
+
+    // Seek to program header
+    generic_file_seek(file, header.program_header_offset);
+
+    // Load program headers
+    unsigned long long offset = header.program_header_offset;
+    for (int i = 0; i < header.program_header_num; i++) {
+        generic_file_read(file, elf.program_headers + i, sizeof(elf_program_header_t));
+        offset += header.program_header_entry_size;
+        generic_file_seek(file, offset);
+    }
+
+    // Load program data
+    elf.data = malloc(header.program_header_num * sizeof(void*));
+    for (int i = 0; i < header.program_header_num; i++) {
+        elf.data[i] = malloc(elf.program_headers[i].file_size);
+        generic_file_seek(file, elf.program_headers[i].offset);
+        generic_file_read(file, elf.data[i], elf.program_headers[i].file_size);
+    }
 
     close_generic_file(file);
+
+    return elf;
 }
 
+// free_elf(elf_t*) -> void
+// Frees memory associated with an elf structure.
+void free_elf(elf_t* elf) {
+    for (int i = 0; i < elf->header.program_header_num; i++) {
+        free(elf->data[i]);
+    }
+    free(elf->data);
+    free(elf->program_headers);
+}
