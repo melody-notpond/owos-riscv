@@ -1,6 +1,7 @@
 #ifndef KERNEL_PROCESS_H
 #define KERNEL_PROCESS_H
 
+#include "elffile.h"
 #include "mmu.h"
 
 #define PROCESS_REGISTER_SP 2
@@ -36,6 +37,10 @@ pid_t spawn_process(pid_t parent_pid);
 // load_elf_as_process(pid_t, elf_t*) -> pid_t
 // Uses an elf file as a process.
 pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_count);
+
+// jump_to_process(pid_t) -> void
+// Jumps to a given process.
+void jump_to_process(pid_t pid);
 
 #endif /* KERNEL_PROCESS_H */
 

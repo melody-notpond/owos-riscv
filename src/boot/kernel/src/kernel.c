@@ -48,8 +48,12 @@ void kmain() {
 
     // Load /bin/simple
     elf_t simple = load_executable_elf_from_file(root, "/bin/simple");
-    load_elf_as_process(0, &simple, 1);
+    pid_t simpled = load_elf_as_process(0, &simple, 1);
     free_elf(&simple);
+
+    // Jump to simple process
+    uart_puts("Loaded simpled.\n");
+    jump_to_process(simpled);
 
     // Hang
     while (running) {

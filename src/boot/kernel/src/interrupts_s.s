@@ -6,7 +6,7 @@
 interrupt_handler:
     # Push registers
     csrrw sp, mscratch, sp
-    addi sp, sp, -0x100
+    addi sp, sp, -0x200
     sd x1, 0x08(sp)
     sd x2, 0x10(sp)
     sd x3, 0x18(sp)
