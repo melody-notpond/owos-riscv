@@ -59,6 +59,9 @@ process_t* fetch_process(pid_t pid) {
 // Uses an elf file as a process.
 pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_count) {
     pid_t pid = spawn_process(parent_pid);
+    if (pid == (unsigned long long) -1)
+        return pid;
+
     process_t* process = fetch_process(pid);
     process->mmu_data = create_mmu_top();
 
@@ -93,6 +96,7 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
 // Jumps to a given process.
 void jump_to_process(pid_t pid) {
     process_t* process = fetch_process(pid);
+    process->state = PROCESS_STATE_RUNNING;
 
     // process_switch_context(process_t*) -> void
     // Switches the current context to a process and continues execution of that process.
@@ -100,3 +104,4 @@ void jump_to_process(pid_t pid) {
 
     process_switch_context(process);
 }
+
