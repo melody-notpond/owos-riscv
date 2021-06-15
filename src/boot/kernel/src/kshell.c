@@ -10,6 +10,7 @@
 // Does the shell.
 void kshell_main(generic_dir_t* root) {
     generic_dir_t* current = root;
+    uart_puts("Welcome to the owOS kernel shell!\nType `help` for a list of commands.\n");
 
     while (1) {
         char* s = uart_readline("> ");
@@ -32,6 +33,30 @@ void kshell_main(generic_dir_t* root) {
         if (command[0] == 0) {
         } else if (!strcmp(command, "ls")) {
         } else if (!strcmp(command, "cd")) {
+            char* filename = s + i + 1;
+            struct s_dir_entry entry = generic_dir_lookup(current, filename);
+
+            switch (entry.tag) {
+                case DIR_ENTRY_TYPE_DIR:
+                    current = entry.value.dir;
+                    break;
+
+                case DIR_ENTRY_TYPE_REGULAR:
+                    uart_printf("%s is a regular file.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_BLOCK:
+                    uart_printf("%s is a block device.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_UNKNOWN:
+                    uart_printf("Unknown file type %s.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_UNUSED:
+                    uart_printf("File %s not found.\n", filename);
+                    break;
+            }
         } else if (!strcmp(command, "hexdump")) {
             char* filename = s + i + 1;
             struct s_dir_entry entry = generic_dir_lookup(current, filename);
