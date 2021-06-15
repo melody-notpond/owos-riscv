@@ -72,6 +72,37 @@ void kshell_main(generic_dir_t* root) {
                     break;
             }
         } else if (!strcmp(command, "cat")) {
+            char* filename = s + i + 1;
+            struct s_dir_entry entry = generic_dir_lookup(current, filename);
+
+            switch (entry.tag) {
+                case DIR_ENTRY_TYPE_REGULAR: {
+                    generic_file_t* file = entry.value.file;
+                    int c;
+                    while ((c = generic_file_read_char(file)) != EOF) {
+                        uart_putc(c);
+                    }
+                    uart_putc('\n');
+                    close_generic_file(file);
+                    break;
+                }
+
+                case DIR_ENTRY_TYPE_DIR:
+                    uart_printf("%s is a directory.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_BLOCK:
+                    uart_printf("%s is a block device.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_UNKNOWN:
+                    uart_printf("Unknown file type %s.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_UNUSED:
+                    uart_printf("File %s not found.\n", filename);
+                    break;
+            }
         } else if (!strcmp(command, "help")) {
             uart_puts(
                 "Help:\n"
