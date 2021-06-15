@@ -1,5 +1,6 @@
 #include <stdarg.h>
 
+#include "../../lib/memory.h"
 #include "../../lib/printf.h"
 #include "uart.h"
 
@@ -76,3 +77,33 @@ void uart_put_hexdump(void* data, unsigned long long size) {
         uart_puts("|\n");
     }
 }
+
+// uart_readline(char*) -> char*
+// Reads a line from uart input.
+char* uart_readline(char* prompt) {
+    uart_puts(prompt);
+    unsigned long long buffer_size = 16;
+    unsigned long long buffer_len = 0;
+    char* buffer = malloc(buffer_size);
+    buffer[0] = 0;
+
+    while (1) {
+        char c = uart_getc_noecho();
+
+        if (c == 0x0d)
+            break;
+
+        // TODO: arrow controls (or maybe not idk)
+        else if (c != 0x1b) {
+            uart_putc(c);
+            buffer[buffer_len++] = c;
+            if (buffer_len >= buffer_size)
+                buffer = realloc(buffer, (buffer_size <<= 1));
+            buffer[buffer_len] = 0;
+        }
+    }
+
+    uart_putc('\n');
+    return buffer;
+}
+

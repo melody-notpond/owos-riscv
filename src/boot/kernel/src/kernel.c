@@ -1,13 +1,14 @@
 #include "drivers/filesystems/ext2.h"
 #include "drivers/filesystems/generic_file.h"
-#include "lib/memory.h"
-#include "userspace/elffile.h"
-#include "userspace/process.h"
-#include "lib/string.h"
+#include "drivers/generic_block.h"
 #include "drivers/uart/uart.h"
 #include "drivers/virtio/block.h"
 #include "drivers/virtio/virtio.h"
-#include "drivers/generic_block.h"
+#include "kshell.h"
+#include "lib/memory.h"
+#include "lib/string.h"
+#include "userspace/elffile.h"
+#include "userspace/process.h"
 
 #define ROOT_DISC "/dev/virt-blk7"
 
@@ -27,7 +28,10 @@ void kmain() {
         while (1);
     }
 
+
+
     // Get /etc/fstab
+    /*
     struct s_dir_entry fstab = generic_dir_lookup(root, "/etc/fstab");
     if (fstab.tag == DIR_ENTRY_TYPE_REGULAR) {
         // Put the contents of fstab on the UART port
@@ -59,6 +63,9 @@ void kmain() {
     while (running) {
         uart_getc();
     }
+    */
+
+    kshell_main();
 
     cleanup_directory(root);
     unmount_generic_dir(root);

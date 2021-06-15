@@ -6,6 +6,7 @@
 .global uart_putc
 .global uart_puts
 .global uart_getc
+.global uart_getc_noecho
 
 
 # uart_init(void) -> void
@@ -168,8 +169,25 @@ getc_echo_wait:
     sw a0, 0x00(t0)
     ret
 
-.section .rodata
-uart_put_hex_array:
-    .string "0123456789ABCDEF"
-    .byte 0
+# uart_getc_noecho(void) -> char
+# Gets a character from the UART port without echoing it back.
+#
+# Parameters: nothing
+# Returns:
+# a0: char      - The last character received.
+# Used registers:
+# - a0
+# - t0
+uart_getc_noecho:
+    li t0, UART_BASE
+
+    # Wait until UART has a new character
+getc_noecho_loop:
+    lbu a0, 0x05(t0)
+    andi a0, a0, 0b00000001
+    beqz a0, getc_noecho_loop
+
+    # Get character
+    lw a0, 0x00(t0)
+    ret
 
