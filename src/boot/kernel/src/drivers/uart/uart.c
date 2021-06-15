@@ -92,9 +92,14 @@ char* uart_readline(char* prompt) {
 
         if (c == 0x0d)
             break;
+        else if (c == 0x7f) {
+            if (buffer_len > 0) {
+                buffer[--buffer_len] = 0;
+                uart_puts("\x1b[D \x1b[D");
+            }
 
         // TODO: arrow controls (or maybe not idk)
-        else if (c != 0x1b) {
+        } else if (c != 0x1b) {
             uart_putc(c);
             buffer[buffer_len++] = c;
             if (buffer_len >= buffer_size)
