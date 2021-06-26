@@ -8,7 +8,6 @@ interrupt_handler:
     csrrw sp, mscratch, sp
     addi sp, sp, -0x200
     sd x1, 0x08(sp)
-    sd x2, 0x10(sp)
     sd x3, 0x18(sp)
     sd x4, 0x20(sp)
     sd x5, 0x28(sp)
@@ -45,7 +44,6 @@ interrupt_handler:
 
     # Pop registers
     ld x1, 0x08(sp)
-    ld x2, 0x10(sp)
     ld x3, 0x18(sp)
     ld x4, 0x20(sp)
     ld x5, 0x28(sp)
@@ -75,7 +73,7 @@ interrupt_handler:
     ld x29, 0xe8(sp)
     ld x30, 0xf0(sp)
     ld x31, 0xf8(sp)
-    addi sp, sp, 0x100
+    addi sp, sp, 0x200
     csrrw sp, mscratch, sp
     mret
 

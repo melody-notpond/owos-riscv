@@ -266,6 +266,13 @@ void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* d
     }
 }
 
+// ext2_generic_file_size(generic_file_t*) -> unsigned long long
+// Returns the file size of a file.
+unsigned long long ext2_generic_file_size(generic_file_t* file) {
+    ext2fs_inode_t* inode = file->metadata_buffer;
+    return ((inode->mode & 0xf000) == INODE_FILE_REGULAR ? (unsigned long long) inode->dir_acl : 0) << 32 | (unsigned long long) inode->size;
+}
+
 // ext2_generic_file_read_char(generic_file_t*) -> int
 // Wrapper function for reading a character from a file. Returns EOF when at end of file.
 int ext2_generic_file_read_char(generic_file_t* file) {
@@ -273,6 +280,8 @@ int ext2_generic_file_read_char(generic_file_t* file) {
         return EOF;
     ext2fs_inode_t* inode = file->metadata_buffer;
     if (inode == (void*) 0)
+        return EOF;
+    if (file->pos >= ext2_generic_file_size(file))
         return EOF;
 
     // Get some useful metadata
@@ -427,13 +436,6 @@ char ext2_unmount(generic_filesystem_t* fs, generic_file_t* root) {
     free(mount);
     root = root; // suppress warning (TODO: save state)
     return 0;
-}
-
-// ext2_generic_file_size(generic_file_t*) -> unsigned long long
-// Returns the file size of a file.
-unsigned long long ext2_generic_file_size(generic_file_t* file) {
-    ext2fs_inode_t* inode = file->metadata_buffer;
-    return ((inode->mode & 0xf000) == INODE_FILE_REGULAR ? (unsigned long long) inode->dir_acl : 0) << 32 | (unsigned long long) inode->size;
 }
 
 // ext2_generic_file_seek(generic_file_t*, unsigned long long) -> void

@@ -74,7 +74,7 @@ void handle_interrupt(unsigned long long mcause) {
                 uart_printf("unknown synchronous interrupt: 0x%llx\n", mcause);
                 break;
         }
-        while (1);
+        //while (1);
     }
 }
 

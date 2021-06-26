@@ -65,7 +65,7 @@ void kmain() {
     }
     */
 
-    kshell_main(root);
+    kshell_main();
 
     cleanup_directory(root);
     unmount_generic_dir(root);

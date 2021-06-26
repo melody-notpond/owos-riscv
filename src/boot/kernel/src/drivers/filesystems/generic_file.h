@@ -134,5 +134,7 @@ struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path);
 // Reads binary data from a file.
 void generic_file_read(generic_file_t* file, void* buffer, unsigned long long size);
 
+extern generic_dir_t* root;
+
 #endif /* KERNEL_FS_GENERIC_H */
 

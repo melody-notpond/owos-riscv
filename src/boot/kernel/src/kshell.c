@@ -6,9 +6,9 @@
 
 #define COMMAND_SIZE 16
 
-// kshell_main(generic_dir_t*) -> void
+// kshell_main() -> void
 // Does the shell.
-void kshell_main(generic_dir_t* root) {
+void kshell_main() {
     generic_dir_t* current = root;
     uart_puts("Welcome to the owOS kernel shell!\nType `help` for a list of commands.\n");
 
@@ -32,6 +32,7 @@ void kshell_main(generic_dir_t* root) {
 
         if (command[0] == 0) {
         } else if (!strcmp(command, "ls")) {
+            // TODO
         } else if (!strcmp(command, "cd")) {
             char* filename = s + i + 1;
             struct s_dir_entry entry = generic_dir_lookup(current, filename);
@@ -128,6 +129,8 @@ void kshell_main(generic_dir_t* root) {
                     uart_printf("File %s not found.\n", filename);
                     break;
             }
+        } else if (!strcmp(command, "pwd")) {
+            // TODO
         } else if (!strcmp(command, "help")) {
             uart_puts(
                 "Help:\n"
@@ -135,6 +138,7 @@ void kshell_main(generic_dir_t* root) {
                 "cd         - changes the current directory\n"
                 "hexdump    - prints out a hexdump of the specified file\n"
                 "ls         - lists the current directory's contents\n"
+                "pwd        - prints out the current working directory\n"
             );
         } else {
             uart_printf("Unknown command %s. Use `help` to get a list of valid commands.\n", command);

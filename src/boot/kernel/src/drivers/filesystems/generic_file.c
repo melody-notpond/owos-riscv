@@ -37,6 +37,7 @@ char mount_block_device(generic_dir_t* dir, generic_block_t* block) {
         (*dir)->fs = fs;
         (*dir)->value = malloc(sizeof(generic_file_t));
         *(*dir)->value = file;
+        (*dir)->value->fs = &(*dir)->fs;
         (*dir)->mountpoint = 1;
     }
     return fail;
@@ -218,6 +219,9 @@ struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name) {
 // generic_dir_lookup(generic_dir_t*, char*) -> struct s_dir_entry
 // Returns an entry with the same name if found. Returns a zeroed out structure if not found.
 struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path) {
+    if (path[0] == '/')
+        dir = root;
+
     char* path_buffer = malloc(strlen(path) + 1);
     path_buffer[0] = 0;
     unsigned long long i = 0;
@@ -263,3 +267,4 @@ void generic_file_read(generic_file_t* file, void* buffer, unsigned long long si
             p[i] = c;
     }
 }
+

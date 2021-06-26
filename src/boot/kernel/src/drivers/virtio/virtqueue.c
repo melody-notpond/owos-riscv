@@ -61,7 +61,7 @@ volatile virtio_descriptor_t* virtqueue_push_descriptor(volatile virtio_queue_t*
     *desc_index = queue->num;
     volatile virtio_descriptor_t* desc = queue->desc + queue->num;
     queue->num++;
-    while (queue->num > VIRTIO_RING_SIZE)
+    while (queue->num >= VIRTIO_RING_SIZE)
         queue->num -= VIRTIO_RING_SIZE;
 
     return desc;
@@ -71,7 +71,7 @@ volatile virtio_descriptor_t* virtqueue_push_descriptor(volatile virtio_queue_t*
 // Pushes an available descriptor to a queue.
 void virtqueue_push_available(volatile virtio_queue_t* queue, unsigned short desc) {
     queue->available->ring[queue->available->idx++] = desc;
-    while (queue->available->idx > VIRTIO_RING_SIZE)
+    while (queue->available->idx >= VIRTIO_RING_SIZE)
         queue->available->idx -= VIRTIO_RING_SIZE;
 }
 
@@ -84,7 +84,7 @@ volatile virtio_descriptor_t* virtqueue_pop_used(volatile virtio_queue_t* queue)
     unsigned short id = queue->used->ring[queue->last_seen_used++].id;
     volatile virtio_descriptor_t* used = &queue->desc[id];
 
-    while (queue->last_seen_used > VIRTIO_RING_SIZE)
+    while (queue->last_seen_used >= VIRTIO_RING_SIZE)
         queue->last_seen_used -= VIRTIO_RING_SIZE;
 
     return used;
