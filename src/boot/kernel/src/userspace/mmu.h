@@ -3,7 +3,7 @@
 
 #include "../lib/memory.h"
 
-#define MMU_UNWRAP(t, a) ((mmu_level_##t##_t*) (((unsigned long long) a.addr) ^ ((unsigned long long) a.flags)))
+#define MMU_UNWRAP(t, a) ((mmu_level_##t##_t*) ((((a).raw) & ~0x3ff) << 2))
 #define MMU_PAGE_SIZE 4096
 
 // Flags
@@ -16,18 +16,20 @@
 #define MMU_FLAG_ACCESSED   0b01000000
 #define MMU_FLAG_DIRTY      0b10000000
 
+typedef void* mmu_level_4_t;
+
 typedef union {
-    char flags;
-    unsigned long long addr;
+    unsigned long long raw;
+    void* addr;
 } mmu_level_3_t;
 
 typedef union {
-    char flags;
+    unsigned long long raw;
     mmu_level_3_t* addr;
 } mmu_level_2_t;
 
 typedef union {
-    char flags;
+    unsigned long long raw;
     mmu_level_2_t* addr;
 } mmu_level_1_t;
 
