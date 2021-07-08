@@ -28,8 +28,6 @@ void kmain() {
         while (1);
     }
 
-
-
     // Get /etc/fstab
     /*
     struct s_dir_entry fstab = generic_dir_lookup(root, "/etc/fstab");

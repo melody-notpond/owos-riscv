@@ -81,7 +81,7 @@ static inline unsigned long long generic_file_size(generic_file_t* file) {
 // generic_file_read_char(generic_file_t*) -> int
 // Reads a character from a file, returning EOF if no more characters are available.
 static inline int generic_file_read_char(generic_file_t* file) {
-    if (/*file->type == GENERIC_FILE_TYPE_REGULAR && */generic_file_size(file) > file->pos)
+    if (file->type == GENERIC_FILE_TYPE_REGULAR && generic_file_size(file) > file->pos)
         return file->fs->read_char(file);
     else
         return EOF;

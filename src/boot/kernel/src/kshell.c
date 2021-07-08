@@ -64,13 +64,7 @@ void kshell_main() {
 
             switch (entry.tag) {
                 case DIR_ENTRY_TYPE_DIR: {
-                    generic_dir_t* dir = entry.value.dir;
-                    generic_file_t* file = (*dir)->value;
-                    unsigned long long filesize = generic_file_size(file);
-                    void* buffer = malloc(filesize);
-                    generic_file_read(file, buffer, filesize);
-                    uart_put_hexdump(buffer, filesize);
-                    free(buffer);
+                    uart_printf("%s is a directory.\n", filename);
                     break;
                 }
 
