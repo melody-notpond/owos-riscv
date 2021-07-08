@@ -93,7 +93,7 @@ ext2fs_inode_t* ext2_get_root_inode(generic_block_t* block, ext2fs_superblock_t*
     return ext2_load_inode(&mount, 2);
 }
 
-struct __attribute__((__packed__, aligned(1))) s_dir_listing {
+struct __attribute__((__packed__, aligned(1))) s_ext2_dir_listing {
     unsigned int inode;
     unsigned short rec_len;
     unsigned char name_len;
@@ -104,11 +104,11 @@ struct __attribute__((__packed__, aligned(1))) s_dir_listing {
 unsigned int ext2_fetch_from_directory_helper(ext2fs_mount_t* mount, char* file, void* data, unsigned long long block_size, unsigned int block_id) {
     // Get directory listing from block
     ext2fs_load_block(mount->block, mount->superblock, block_id, data);
-    struct s_dir_listing* p = data;
-    struct s_dir_listing* end = (struct s_dir_listing*) (((void*) data) + block_size);
+    struct s_ext2_dir_listing* p = data;
+    struct s_ext2_dir_listing* end = (struct s_ext2_dir_listing*) (((void*) data) + block_size);
 
     // Iterate over directory listings
-    for (; p < end; p = p->rec_len ? ((void*) p) + p->rec_len : p + 1) {
+    for (; p < end && p->rec_len != 0; p = ((void*) p) + p->rec_len) {
         // Compare string
         char name[p->name_len + 1];
         name[p->name_len] = 0;
@@ -482,6 +482,121 @@ void ext2_generic_file_seek(generic_file_t* file, unsigned long long pos) {
     file->buffer_indices[file->current_buffer] = buffer;
 }
 
+struct s_dir_entry* dir_entry_list_append(struct s_dir_entry* entries, unsigned long long* size, unsigned long long* length, struct s_dir_entry entry) {
+    if (*length + 1 >= *size) {
+        *size <<= 1;
+        entries = realloc(entries, *size * sizeof(struct s_dir_entry));
+    }
+
+    entries[*length] = entry;
+    entries[*length + 1] = (struct s_dir_entry) {
+        .tag = DIR_ENTRY_TYPE_UNUSED,
+        .name = (void*) 0
+    };
+
+    *length += 1;
+    return entries;
+}
+
+struct s_dir_entry* ext2_generic_dir_list_helper(ext2fs_mount_t* mount, unsigned int block_id, void* data, unsigned long long block_size, struct s_dir_entry* entries, unsigned long long* size, unsigned long long* length) {
+    // Get directory listing from block
+    ext2fs_load_block(mount->block, mount->superblock, block_id, data);
+    struct s_ext2_dir_listing* p = data;
+    struct s_ext2_dir_listing* end = (struct s_ext2_dir_listing*) (((void*) data) + block_size);
+
+    // Iterate over directory listings
+    for (; p < end && p->rec_len != 0; p = ((void*) p) + p->rec_len) {
+        if (p->inode == 0)
+            continue;
+
+        // Get string
+        char* name = malloc(p->name_len + 1);
+        name[p->name_len] = 0;
+        memcpy(name, p->name, p->name_len);
+
+        // TODO: Get metadata from inode
+        struct s_dir_entry entry = {
+            .name = name,
+            .permissions = 0,
+            .tag = DIR_ENTRY_TYPE_UNKNOWN,
+            .value = { 0 }
+        };
+
+        entries = dir_entry_list_append(entries, size, length, entry);
+    }
+
+    return entries;
+}
+
+// ext2_generic_dir_list(generic_dir_t*) -> struct s_dir_entry*
+// Returns a listing of the files in a directory.
+struct s_dir_entry* ext2_generic_dir_list(generic_dir_t* dir) {
+    unsigned long long length = 0;
+    unsigned long long size = 8;
+    struct s_dir_entry* entries = malloc(size * sizeof(struct s_dir_entry));
+    ext2fs_mount_t* mount = (*dir)->fs.mount;
+    ext2fs_inode_t* inode = (*dir)->value->metadata_buffer;
+
+    unsigned long long block_size = 1024 << mount->superblock->log_block_size;
+
+    // Direct blocks
+    void* data = malloc(block_size);
+    for (int i = 0; i < INODE_DIRECT_COUNT; i++) {
+        unsigned int block_id = inode->block[i];
+
+        entries = ext2_generic_dir_list_helper(mount, block_id, data, block_size, entries, &size, &length);
+    }
+
+    // Singly indirect block
+    void* indirect1 = (void*) 0;
+    if (inode->block[INODE_SINGLE_INDIRECT] != 0) {
+        indirect1 = malloc(block_size);
+        ext2fs_load_block(mount->block, mount->superblock, inode->block[INODE_SINGLE_INDIRECT], indirect1);
+
+        for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size) && *i; i++) {
+            entries = ext2_generic_dir_list_helper(mount, *i, data, block_size, entries, &size, &length);
+        }
+    }
+
+    // Doubly indirect block
+    unsigned int* indirect2 = (void*) 0;
+    if (inode->block[INODE_DOUBLE_INDIRECT] != 0) {
+        indirect2 = malloc(block_size);
+        ext2fs_load_block(mount->block, mount->superblock, inode->block[INODE_DOUBLE_INDIRECT], indirect1);
+
+        for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size) && *i; i++) {
+            ext2fs_load_block(mount->block, mount->superblock, *i, indirect2);
+            for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size) && *j; j++) {
+                entries = ext2_generic_dir_list_helper(mount, *j, data, block_size, entries, &size, &length);
+            }
+        }
+    }
+
+    // Triply indirect block
+    unsigned int* indirect3 = (void*) 0;
+    if (inode->block[INODE_TRIPLE_INDIRECT] != 0) {
+        indirect2 = malloc(block_size);
+        ext2fs_load_block(mount->block, mount->superblock, inode->block[INODE_TRIPLE_INDIRECT], indirect1);
+
+        for (unsigned int* i = indirect1; i < (unsigned int*) (indirect1 + block_size) && *i; i++) {
+            ext2fs_load_block(mount->block, mount->superblock, *i, indirect2);
+            for (unsigned int* j = indirect2; j < (unsigned int*) (indirect2 + block_size) && *j; j++) {
+                ext2fs_load_block(mount->block, mount->superblock, *j, indirect3);
+                for (unsigned int* k = indirect3; k < (unsigned int*) (indirect3 + block_size) && *k; k++) {
+                    entries = ext2_generic_dir_list_helper(mount, *k, data, block_size, entries, &size, &length);
+                }
+            }
+        }
+    }
+
+    // Free everything
+    free(data);
+    free(indirect1);
+    free(indirect2);
+    free(indirect3);
+    return entries;
+}
+
 // ext2_mount(generic_block_t*, generic_filesystem_t*, generic_file_t*) -> char
 // Mounts an ext2 file system from a generic block device. Returns 0 on success.
 char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t* root) {
@@ -520,7 +635,8 @@ char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t
         .read_char = ext2_generic_file_read_char,
         .lookup = ext2_generic_dir_lookup,
         .seek = ext2_generic_file_seek,
-        .size = ext2_generic_file_size
+        .size = ext2_generic_file_size,
+        .list = ext2_generic_dir_list
     };
 
     // Get first buffer

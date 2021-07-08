@@ -23,6 +23,7 @@ typedef struct s_generic_filesystem {
     char (*unmount)(struct s_generic_filesystem*, generic_file_t*);
     int (*read_char)(generic_file_t*);
     struct s_dir_entry (*lookup)(generic_dir_t*, char*);
+    struct s_dir_entry* (*list)(generic_dir_t*);
     unsigned long long (*size)(generic_file_t*);
     void (*seek)(generic_file_t*, unsigned long long);
 } generic_filesystem_t;
@@ -37,6 +38,7 @@ typedef enum {
 
 struct s_dir_entry {
     char* name;
+    unsigned short permissions;
 
     dir_entry_type_t tag;
     union {
@@ -71,6 +73,12 @@ struct s_generic_file {
     void* buffers[BUFFER_COUNT];
     unsigned char written_buffers[(BUFFER_COUNT + 1) / 8];
 };
+
+// generic_file_list(generic_dir_t*) -> struct s_dir_entry*
+// Returns a list of directory entries.
+static inline struct s_dir_entry* generic_dir_list(generic_dir_t* dir) {
+    return (*dir)->fs.list(dir);
+}
 
 // generic_file_size(generic_file_t* file) -> unsigned long long
 // Returns the size of the file.
@@ -133,6 +141,10 @@ struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path);
 // generic_file_read(generic_file_t*, void*, unsigned long long) -> void
 // Reads binary data from a file.
 void generic_file_read(generic_file_t* file, void* buffer, unsigned long long size);
+
+// clean_generic_entry_listing(struct s_dir_entry*) -> void
+// Cleans a list of entries returned by generic_dir_list().
+void clean_generic_entry_listing(struct s_dir_entry* entries);
 
 extern generic_dir_t* root;
 

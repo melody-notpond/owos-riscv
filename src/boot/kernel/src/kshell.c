@@ -32,7 +32,38 @@ void kshell_main() {
 
         if (command[0] == 0) {
         } else if (!strcmp(command, "ls")) {
-            // TODO
+            char* filename = s + i + 1;
+            struct s_dir_entry entry = generic_dir_lookup(current, filename);
+
+            switch (entry.tag) {
+                case DIR_ENTRY_TYPE_DIR: {
+                    struct s_dir_entry* entries = generic_dir_list(entry.value.dir);
+                    struct s_dir_entry* e = entries;
+                    uart_puts("Entries of directory:\n");
+                    while (e->tag != DIR_ENTRY_TYPE_UNUSED) {
+                        uart_printf("%s\n", e->name);
+                        e++;
+                    }
+                    clean_generic_entry_listing(entries);
+                    break;
+                }
+
+                case DIR_ENTRY_TYPE_REGULAR:
+                    uart_printf("%s is a regular file.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_BLOCK:
+                    uart_printf("%s is a block device.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_UNKNOWN:
+                    uart_printf("Unknown file type %s.\n", filename);
+                    break;
+
+                case DIR_ENTRY_TYPE_UNUSED:
+                    uart_printf("File %s not found.\n", filename);
+                    break;
+            }
         } else if (!strcmp(command, "cd")) {
             char* filename = s + i + 1;
             struct s_dir_entry entry = generic_dir_lookup(current, filename);

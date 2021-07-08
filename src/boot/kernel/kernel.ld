@@ -13,7 +13,7 @@ SECTIONS
     .rodata : { *(.rodata) }
     .sdata : { *(.sdata) }
     .debug : { *(.debug) }
-    . += 0x80000;
+    . += 0x8000;
     . = ALIGN(16);
     stack_top = .;
 

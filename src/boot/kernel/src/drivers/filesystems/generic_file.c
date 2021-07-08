@@ -268,3 +268,14 @@ void generic_file_read(generic_file_t* file, void* buffer, unsigned long long si
     }
 }
 
+// clean_generic_entry_listing(struct s_dir_entry*) -> void
+// Cleans a list of entries returned by generic_dir_list().
+void clean_generic_entry_listing(struct s_dir_entry* entries) {
+    struct s_dir_entry* e = entries;
+    while (e->tag != DIR_ENTRY_TYPE_UNUSED) {
+        free(e->name);
+        e++;
+    }
+
+    free(entries);
+}

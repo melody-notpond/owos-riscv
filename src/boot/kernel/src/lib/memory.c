@@ -155,14 +155,17 @@ void* malloc(unsigned long int n) {
     }
 
     // Error message on out of memory
-    if (ptr >= (struct s_malloc_pointer_header*) &pages_bottom)
-        uart_printf("[malloc] Out of memory!\nAttempted to load address 0x%p\n", ptr);
+    if (ptr + size >= (struct s_malloc_pointer_header*) &pages_bottom)
+        uart_printf("[malloc] Out of memory! Attempted to load address 0x%p with size 0x%llx!\n", ptr, size);
     return (void*) 0;
 }
 
 // realloc(void*, unsigned long int) -> void*
 // Reallocates a piece of memory, returning the new pointer.
 void* realloc(void* ptr, unsigned long int n) {
+    if (ptr == (void*) 0)
+        return (void*) 0;
+
     struct s_malloc_pointer_header* header = ptr - sizeof(struct s_malloc_pointer_header);
     if (header->size >= n)
         return ptr;
