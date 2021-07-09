@@ -1,5 +1,5 @@
 #include "memory.h"
-#include "../drivers/uart/uart.h"
+#include "../drivers/console/console.h"
 
 // TODO: figure out how to make this dependent on how much memory is detected
 #define HEAP_SIZE 0x100000
@@ -156,7 +156,7 @@ void* malloc(unsigned long int n) {
 
     // Error message on out of memory
     if (ptr + size >= (struct s_malloc_pointer_header*) &pages_bottom)
-        uart_printf("[malloc] Out of memory! Attempted to load address 0x%p with size 0x%llx!\n", ptr, size);
+        console_printf("[malloc] Out of memory! Attempted to load address 0x%p with size 0x%llx!\n", ptr, size);
     return (void*) 0;
 }
 

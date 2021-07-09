@@ -2,20 +2,47 @@
 
 #include "../../lib/memory.h"
 #include "../../lib/printf.h"
-#include "uart.h"
+#include "console.h"
+#include "../../opensbi.h"
 
-// uart_printf(char*, ...) -> void
+// console_getc_noecho() -> char
+// Gets a character from the console without echoing it back.
+char console_getc_noecho() {
+    int c;
+    while ((c = sbi_console_getchar()) == -1);
+    return c;
+}
+
+// console_getc(void) -> char
+// Gets a character from the console and echos it back.
+char console_getc() {
+    int c;
+    while ((c = sbi_console_getchar()) == -1);
+    sbi_console_putchar(c);
+    return c;
+}
+
+// console_puts(char*) -> void
+// Puts a string onto the console.
+void console_puts(char* s) {
+    while (*s) {
+        sbi_console_putchar(*s);
+        s++;
+    }
+}
+
+// console_printf(char*, ...) -> void
 // Writes its arguments to the UART port according to the format string and write function provided.
-__attribute__((format(printf, 1, 2))) void uart_printf(char* format, ...) {
+__attribute__((format(printf, 1, 2))) void console_printf(char* format, ...) {
     va_list va;
     va_start(va, format);
-    func_vprintf(uart_putc, format, va);
+    func_vprintf(sbi_console_putchar, format, va);
     va_end(va);
 }
 
-// uart_log_16(unsigned long long) -> unsigned int
+// console_log_16(unsigned long long) -> unsigned int
 // Gets the base 16 log of a number as an int.
-unsigned int uart_log_16(unsigned long long n) {
+unsigned int console_log_16(unsigned long long n) {
     unsigned int i = 0;
     while (n) {
         n >>= 4;
@@ -24,21 +51,21 @@ unsigned int uart_log_16(unsigned long long n) {
     return i;
 }
 
-// uart_put_hexdump(void*, unsigned long long)
+// console_put_hexdump(void*, unsigned long long)
 // Dumps a hexdump onto the UART port.
-void uart_put_hexdump(void* data, unsigned long long size) {
-    unsigned int num_zeros = uart_log_16(size);
+void console_put_hexdump(void* data, unsigned long long size) {
+    unsigned int num_zeros = console_log_16(size);
     unsigned char* data_char = (unsigned char*) data;
 
     for (unsigned long long i = 0; i < (size + 15) / 16; i++) {
         // Print out buffer zeroes
-        unsigned int num_zeros_two = num_zeros - uart_log_16(i) - 1;
+        unsigned int num_zeros_two = num_zeros - console_log_16(i) - 1;
         for (unsigned int j = 0; j < num_zeros_two; j++) {
-            uart_printf("%x", 0);
+            console_printf("%x", 0);
         }
 
         // Print out label
-        uart_printf("%llx    ", i * 16);
+        console_printf("%llx    ", i * 16);
 
         // Print out values
         for (int j = 0; j < 16; j++) {
@@ -46,16 +73,16 @@ void uart_put_hexdump(void* data, unsigned long long size) {
 
             // Skip values if the index is greater than the number of values to dump
             if (index >= size)
-                uart_puts("   ");
+                console_puts("   ");
             else {
                 // Print out the value
                 if (data_char[index] < 16)
-                    uart_printf("%x", 0);
-                uart_printf("%x ", data_char[index]);
+                    console_printf("%x", 0);
+                console_printf("%x ", data_char[index]);
             }
         }
 
-        uart_puts("    |");
+        console_puts("    |");
 
         // Print out characters
         for (int j = 0; j < 16; j++) {
@@ -63,44 +90,44 @@ void uart_put_hexdump(void* data, unsigned long long size) {
 
             // Skip characters if the index is greater than the number of characters to dump
             if (index >= size)
-                uart_putc('.');
+                sbi_console_putchar('.');
 
             // Print out printable characters
             else if (32 <= data_char[index] && data_char[index] < 127)
-                uart_putc(data_char[index]);
+                sbi_console_putchar(data_char[index]);
 
             // Nonprintable characters are represented by a period (.)
             else
-                uart_putc('.');
+                sbi_console_putchar('.');
         }
 
-        uart_puts("|\n");
+        console_puts("|\n");
     }
 }
 
-// uart_readline(char*) -> char*
-// Reads a line from uart input.
-char* uart_readline(char* prompt) {
-    uart_puts(prompt);
+// console_readline(char*) -> char*
+// Reads a line from console input.
+char* console_readline(char* prompt) {
+    console_puts(prompt);
     unsigned long long buffer_size = 16;
     unsigned long long buffer_len = 0;
     char* buffer = malloc(buffer_size);
     buffer[0] = 0;
 
     while (1) {
-        char c = uart_getc_noecho();
+        char c = console_getc_noecho();
 
         if (c == 0x0d)
             break;
         else if (c == 0x7f) {
             if (buffer_len > 0) {
                 buffer[--buffer_len] = 0;
-                uart_puts("\x1b[D \x1b[D");
+                console_puts("\x1b[D \x1b[D");
             }
 
         // TODO: arrow controls (or maybe not idk)
         } else if (c != 0x1b) {
-            uart_putc(c);
+            sbi_console_putchar(c);
             buffer[buffer_len++] = c;
             if (buffer_len >= buffer_size)
                 buffer = realloc(buffer, (buffer_size <<= 1));
@@ -108,7 +135,7 @@ char* uart_readline(char* prompt) {
         }
     }
 
-    uart_putc('\n');
+    sbi_console_putchar('\n');
     return buffer;
 }
 

@@ -4,7 +4,7 @@ ENTRY( _start )
 SECTIONS
 {
     /* text: text code section */
-    . = 0x80000000;
+    . = 0x80200000;
     .text : { *(.text) }
 
     /* data: Initialized data segment */

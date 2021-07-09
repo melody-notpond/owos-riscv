@@ -25,7 +25,7 @@
                                                                                                          \
         /* 6. Check that the features ok bit is still enabled */                                         \
         if ((addr->status & VIRTIO_DEVICE_STATUS_FEATURES_OK) == 0) {                                    \
-            uart_puts("Virtio device does not support given features. Giving up on initialisation.\n");  \
+            console_puts("Virtio device does not support given features. Giving up on initialisation.\n");  \
             return -1;                                                                                   \
         }                                                                                                \
                                                                                                          \

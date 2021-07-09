@@ -2,10 +2,9 @@
 .global interrupt_handler
 .align 2
 
-
 interrupt_handler:
     # Push registers
-    csrrw sp, mscratch, sp
+    csrrw sp, sscratch, sp
     addi sp, sp, -0x200
     sd x1, 0x08(sp)
     sd x3, 0x18(sp)
@@ -39,7 +38,8 @@ interrupt_handler:
     sd x31, 0xf8(sp)
 
     # Call interrupt handler
-    csrr a0, mcause
+    csrr a0, scause
+    csrr a1, sepc
     jal handle_interrupt
 
     # Pop registers
@@ -74,7 +74,7 @@ interrupt_handler:
     ld x30, 0xf0(sp)
     ld x31, 0xf8(sp)
     addi sp, sp, 0x200
-    csrrw sp, mscratch, sp
+    csrrw sp, sscratch, sp
     mret
 
 

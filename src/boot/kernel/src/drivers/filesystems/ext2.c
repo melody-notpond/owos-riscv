@@ -1,7 +1,7 @@
 #include "ext2.h"
 #include "../../lib/memory.h"
 #include "../../lib/string.h"
-#include "../uart/uart.h"
+#include "../console/console.h"
 
 #define INODE_DIRECT_COUNT 12
 #define INODE_SINGLE_INDIRECT 12
@@ -19,14 +19,14 @@ ext2fs_superblock_t* ext2_load_superblock(generic_block_t* block) {
 
     // Check the magic number
     if (superblock->magic != 0xef53) {
-        uart_puts("ext2 filesystem not found.\n");
+        console_puts("ext2 filesystem not found.\n");
         free(superblock);
         return (ext2fs_superblock_t*) 0;
     }
 
     // Debug info
-    uart_printf("File system has 0x%x inodes.\n", superblock->inodes_count);
-    uart_printf("File system has 0x%x blocks.\n", superblock->blocks_count);
+    console_printf("File system has 0x%x inodes.\n", superblock->inodes_count);
+    console_printf("File system has 0x%x blocks.\n", superblock->blocks_count);
 
     return superblock;
 }

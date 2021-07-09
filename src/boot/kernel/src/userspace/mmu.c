@@ -1,5 +1,5 @@
 #include "mmu.h"
-#include "../drivers/uart/uart.h"
+#include "../drivers/console/console.h"
 
 // create_mmu_top() -> mmu_level_1_t*
 // Creates an MMU data structure.
@@ -53,10 +53,10 @@ void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
     mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1, flags);
 
     if (level3 == (void*) 0) {
-        uart_printf("[map_mmu] Error mapping virtual address %p to physical address %p!\n", virtual, physical);
+        console_printf("[map_mmu] Error mapping virtual address %p to physical address %p!\n", virtual, physical);
         return;
     } else if (level3->addr != (void*) 0) {
-        uart_printf("[map_mmu] Warning: %p is already mapped to %p; not remapping to %p.\n", virtual, MMU_UNWRAP(4, *level3), physical);
+        console_printf("[map_mmu] Warning: %p is already mapped to %p; not remapping to %p.\n", virtual, MMU_UNWRAP(4, *level3), physical);
         return;
     }
 
@@ -78,11 +78,11 @@ void* alloc_page_mmu(mmu_level_1_t* top, void* virtual, char flags) {
     mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1, flags);
 
     if (level3 == (void*) 0) {
-        uart_printf("[alloc_page_mmu] Error allocating a page for virtual address %p!\n", virtual);
+        console_printf("[alloc_page_mmu] Error allocating a page for virtual address %p!\n", virtual);
         return (void*) 0;
     } else if (level3->addr != (void*) 0) {
         void* physical = MMU_UNWRAP(4, *level3);
-        uart_printf("[alloc_page_mmu] Warning: %p is already mapped to %p; not remapping to a fresh page.\n", virtual, physical);
+        console_printf("[alloc_page_mmu] Warning: %p is already mapped to %p; not remapping to a fresh page.\n", virtual, physical);
         return physical;
     }
 

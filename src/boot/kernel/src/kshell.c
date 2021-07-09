@@ -1,5 +1,6 @@
+#include "opensbi.h"
 #include "drivers/filesystems/generic_file.h"
-#include "drivers/uart/uart.h"
+#include "drivers/console/console.h"
 #include "kshell.h"
 #include "lib/memory.h"
 #include "lib/string.h"
@@ -10,10 +11,10 @@
 // Does the shell.
 void kshell_main() {
     generic_dir_t* current = root;
-    uart_puts("Welcome to the owOS kernel shell!\nType `help` for a list of commands.\n");
+    console_puts("Welcome to the owOS kernel shell!\nType `help` for a list of commands.\n");
 
     while (1) {
-        char* s = uart_readline("> ");
+        char* s = console_readline("> ");
 
         char command[COMMAND_SIZE] = { 0 };
         int i;
@@ -25,7 +26,7 @@ void kshell_main() {
         }
 
         if (command[COMMAND_SIZE - 1] != 0) {
-            uart_printf("Command %s is dummy thicc.\n", s);
+            console_printf("Command %s is dummy thicc.\n", s);
             free(s);
             continue;
         }
@@ -39,9 +40,9 @@ void kshell_main() {
                 case DIR_ENTRY_TYPE_DIR: {
                     struct s_dir_entry* entries = generic_dir_list(entry.value.dir);
                     struct s_dir_entry* e = entries;
-                    uart_puts("Entries of directory:\n");
+                    console_puts("Entries of directory:\n");
                     while (e->tag != DIR_ENTRY_TYPE_UNUSED) {
-                        uart_printf("%s\n", e->name);
+                        console_printf("%s\n", e->name);
                         e++;
                     }
                     clean_generic_entry_listing(entries);
@@ -49,19 +50,19 @@ void kshell_main() {
                 }
 
                 case DIR_ENTRY_TYPE_REGULAR:
-                    uart_printf("%s is a regular file.\n", filename);
+                    console_printf("%s is a regular file.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_BLOCK:
-                    uart_printf("%s is a block device.\n", filename);
+                    console_printf("%s is a block device.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNKNOWN:
-                    uart_printf("Unknown file type %s.\n", filename);
+                    console_printf("Unknown file type %s.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNUSED:
-                    uart_printf("File %s not found.\n", filename);
+                    console_printf("File %s not found.\n", filename);
                     break;
             }
         } else if (!strcmp(command, "cd")) {
@@ -74,19 +75,19 @@ void kshell_main() {
                     break;
 
                 case DIR_ENTRY_TYPE_REGULAR:
-                    uart_printf("%s is a regular file.\n", filename);
+                    console_printf("%s is a regular file.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_BLOCK:
-                    uart_printf("%s is a block device.\n", filename);
+                    console_printf("%s is a block device.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNKNOWN:
-                    uart_printf("Unknown file type %s.\n", filename);
+                    console_printf("Unknown file type %s.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNUSED:
-                    uart_printf("File %s not found.\n", filename);
+                    console_printf("File %s not found.\n", filename);
                     break;
             }
         } else if (!strcmp(command, "hexdump")) {
@@ -95,7 +96,7 @@ void kshell_main() {
 
             switch (entry.tag) {
                 case DIR_ENTRY_TYPE_DIR: {
-                    uart_printf("%s is a directory.\n", filename);
+                    console_printf("%s is a directory.\n", filename);
                     break;
                 }
 
@@ -104,22 +105,22 @@ void kshell_main() {
                     unsigned long long filesize = generic_file_size(file);
                     void* buffer = malloc(filesize);
                     generic_file_read(file, buffer, filesize);
-                    uart_put_hexdump(buffer, filesize);
+                    console_put_hexdump(buffer, filesize);
                     free(buffer);
                     close_generic_file(file);
                     break;
                 }
 
                 case DIR_ENTRY_TYPE_BLOCK:
-                    uart_printf("%s is a block device.\n", filename);
+                    console_printf("%s is a block device.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNKNOWN:
-                    uart_printf("Unknown file type %s.\n", filename);
+                    console_printf("Unknown file type %s.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNUSED:
-                    uart_printf("File %s not found.\n", filename);
+                    console_printf("File %s not found.\n", filename);
                     break;
             }
         } else if (!strcmp(command, "cat")) {
@@ -131,33 +132,33 @@ void kshell_main() {
                     generic_file_t* file = entry.value.file;
                     int c;
                     while ((c = generic_file_read_char(file)) != EOF) {
-                        uart_putc(c);
+                        sbi_console_putchar(c);
                     }
-                    uart_putc('\n');
+                    sbi_console_putchar('\n');
                     close_generic_file(file);
                     break;
                 }
 
                 case DIR_ENTRY_TYPE_DIR:
-                    uart_printf("%s is a directory.\n", filename);
+                    console_printf("%s is a directory.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_BLOCK:
-                    uart_printf("%s is a block device.\n", filename);
+                    console_printf("%s is a block device.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNKNOWN:
-                    uart_printf("Unknown file type %s.\n", filename);
+                    console_printf("Unknown file type %s.\n", filename);
                     break;
 
                 case DIR_ENTRY_TYPE_UNUSED:
-                    uart_printf("File %s not found.\n", filename);
+                    console_printf("File %s not found.\n", filename);
                     break;
             }
         } else if (!strcmp(command, "pwd")) {
             // TODO
         } else if (!strcmp(command, "help")) {
-            uart_puts(
+            console_puts(
                 "Help:\n"
                 "cat        - prints out the contents of a file\n"
                 "cd         - changes the current directory\n"
@@ -166,7 +167,7 @@ void kshell_main() {
                 "pwd        - prints out the current working directory\n"
             );
         } else {
-            uart_printf("Unknown command %s. Use `help` to get a list of valid commands.\n", command);
+            console_printf("Unknown command %s. Use `help` to get a list of valid commands.\n", command);
         }
 
         free(s);

@@ -1,5 +1,5 @@
 #include "userspace/syscall.h"
-#include "drivers/uart/uart.h"
+#include "drivers/console/console.h"
 
 //#define INTERRUPT_DEBUG
 #define PLIC_BASE  0x0c000000
@@ -30,9 +30,9 @@ void handle_mei() {
 
     // Debug stuff
 #ifdef INTERRUPT_DEBUG
-    uart_puts("MEI id is 0x");
-    uart_put_hex(mei_id);
-    uart_putc('\n');
+    console_puts("MEI id is 0x");
+    console_put_hex(mei_id);
+    console_putc('\n');
 #endif
 
     // Call handler if available
@@ -44,18 +44,18 @@ void handle_mei() {
 
 // handle_interrupt(unsigned long long) -> void
 // Called by the interrupt handler to dispatch the interrupt.
-void handle_interrupt(unsigned long long mcause) {
+void handle_interrupt(unsigned long long scause) {
     // Debug stuff
 #ifdef INTERRUPT_DEBUG
-    uart_puts("Interrupt received: 0x");
-    uart_put_hex(mcause);
-    uart_putc('\n');
+    console_puts("Interrupt received: 0x");
+    console_put_hex(scause);
+    console_putc('\n');
 #endif
 
     // Asynchronous interrupts
-    if (mcause &  0x8000000000000000) {
-        mcause &= 0x7fffffffffffffff;
-        switch (mcause) {
+    if (scause &  0x8000000000000000) {
+        scause &= 0x7fffffffffffffff;
+        switch (scause) {
             case 0x0b:
                 handle_mei();
                 break;
@@ -65,13 +65,13 @@ void handle_interrupt(unsigned long long mcause) {
 
     // Synchronous interrupts
     } else {
-        switch (mcause) {
+        switch (scause) {
             // User mode syscall
             case 0x08:
                 user_syscall(0);
                 break;
             default:
-                uart_printf("unknown synchronous interrupt: 0x%llx\n", mcause);
+                console_printf("unknown synchronous interrupt: 0x%llx\n", scause);
                 break;
         }
         while (1);

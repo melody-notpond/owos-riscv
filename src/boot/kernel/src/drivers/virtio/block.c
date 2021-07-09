@@ -2,7 +2,7 @@
 #include "../../interrupts.h"
 #include "../../lib/memory.h"
 #include "../../lib/string.h"
-#include "../uart/uart.h"
+#include "../console/console.h"
 
 typedef struct __attribute__((__packed__, aligned(1))) { 
     unsigned long long capacity; 
@@ -67,7 +67,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
 
     // Get config
     volatile virtio_block_config_t* config = (volatile virtio_block_config_t*) mmio->config;
-    uart_printf("Block device has 0x%llx sectors.\n", config->capacity);
+    console_printf("Block device has 0x%llx sectors.\n", config->capacity);
 
     // Add block device
     long long i = (((long long) mmio) - VIRTIO_MMIO_BASE) / VIRTIO_MMIO_INTERVAL;
@@ -81,7 +81,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
 
     // Add interrupt
     if (register_mei_handler(i + 1, 7, virtio_block_mei_handler)) {
-        uart_puts("Warning: interrupt handler for block device is unregistered\n");
+        console_puts("Warning: interrupt handler for block device is unregistered\n");
     }
 
     // Finish initialisation

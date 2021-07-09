@@ -1,5 +1,5 @@
 #include "../../lib/memory.h"
-#include "../uart/uart.h"
+#include "../console/console.h"
 #include "virtqueue.h"
 
 // virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int) -> volatile virtio_queue_t*
@@ -10,7 +10,7 @@ volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio, u
 
     // If the queue size is too small, give up
     if (queue_num_max < VIRTIO_RING_SIZE) {
-        uart_puts("Queue size is invalid.");
+        console_puts("Queue size is invalid.");
         return (volatile virtio_queue_t*) 0;
     }
 
@@ -22,7 +22,7 @@ volatile virtio_queue_t* virtqueue_add_to_device(volatile virtio_mmio_t* mmio, u
 
     // Check that queue is not in use
     if (mmio->queue_ready) {
-        uart_puts("Queue is being used.\n");
+        console_puts("Queue is being used.\n");
         return (volatile virtio_queue_t*) 0;
     }
 

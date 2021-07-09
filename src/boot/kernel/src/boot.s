@@ -3,26 +3,18 @@
 .global interrupt_init
 
 _start:
-    # Use only the zeroth hart
-    csrr t0, mhartid
-    bnez t0, finish
-
-    # Set machine trap vector
-    la t0, interrupt_handler
-    csrw mtvec, t0
-
     # Initialise stack pointer and mscratch
     la sp, isr_stack_end
-    csrrw sp, mscratch, sp
+    csrrw sp, sscratch, sp
     la sp, stack_top
     mv fp, sp
 
-    # Initialise UART
-    jal uart_init
+    la a0, welcome_msg
+    call console_puts
 
-    # Tell user that UART is initialised
-    la a0, uart_init_msg
-    jal uart_puts
+    # Set supervisor trap vector
+    la t0, interrupt_handler
+    csrw stvec, t0
 
     # Jump to kernel init
     j kinit
@@ -46,10 +38,10 @@ interrupt_priority_set_loop:
     #*/
 
     # Enable interrupts
-    li t0, 0x800
-    csrs mie, t0
-    li t0, 0x8
-    csrs mstatus, t0
+    li t0, 0x200
+    csrs sie, t0
+    li t0, 0x2
+    csrs sstatus, t0
 
     # Set priority threshold
     li t1, 0x0C200000
@@ -63,7 +55,7 @@ finish:
 
 
 .section .rodata
-uart_init_msg:
-    .string "Initialised UART\n"
+welcome_msg:
+    .string "Welcome to owOS!\n"
     .byte 0
 

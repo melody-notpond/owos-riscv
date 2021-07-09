@@ -1,7 +1,7 @@
 #include "drivers/filesystems/ext2.h"
 #include "drivers/filesystems/generic_file.h"
 #include "drivers/generic_block.h"
-#include "drivers/uart/uart.h"
+#include "drivers/console/console.h"
 #include "drivers/virtio/block.h"
 #include "drivers/virtio/virtio.h"
 #include "kshell.h"
@@ -16,15 +16,15 @@ generic_dir_t* root;
 char running = 1;
 
 void kmain() {
-    uart_puts("Finished initialisation.\n");
-    uart_printf("Heap has 0x%llx bytes free.\n", memfree());
+    console_puts("Finished initialisation.\n");
+    console_printf("Heap has 0x%llx bytes free.\n", memfree());
 
     // Mount root file system
     struct s_dir_entry entry = generic_dir_lookup(root, ROOT_DISC);
     if (!mount_block_device(root, entry.value.block)) {
-        uart_puts("Mounted root file system (" ROOT_DISC ")\n");
+        console_puts("Mounted root file system (" ROOT_DISC ")\n");
     } else {
-        uart_puts("Failed to mount file system\n");
+        console_puts("Failed to mount file system\n");
         while (1);
     }
 
@@ -34,18 +34,18 @@ void kmain() {
     if (fstab.tag == DIR_ENTRY_TYPE_REGULAR) {
         // Put the contents of fstab on the UART port
         // TODO: do fstab-y things
-        uart_puts("Found /etc/fstab:\n");
+        console_puts("Found /etc/fstab:\n");
         generic_file_t* file = fstab.value.file;
         int c;
         while ((c = generic_file_read_char(file)) != EOF) {
-            uart_putc(c);
+            console_putc(c);
         }
-        uart_putc('\n');
+        console_putc('\n');
         close_generic_file(file);
     } else {
         if (fstab.tag == DIR_ENTRY_TYPE_DIR)
             cleanup_directory(fstab.value.dir);
-        uart_puts("Could not find file /etc/fstab\n");
+        console_puts("Could not find file /etc/fstab\n");
     }
 
     // Load /bin/simple
@@ -54,12 +54,12 @@ void kmain() {
     free_elf(&simple);
 
     // Jump to simple process
-    uart_puts("Loaded simpled.\n");
+    console_puts("Loaded simpled.\n");
     jump_to_process(simpled);
 
     // Hang
     while (running) {
-        uart_getc();
+        console_getc();
     }
     */
 
@@ -69,15 +69,15 @@ void kmain() {
     unmount_generic_dir(root);
     clean_virtio_block_devices();
 
-    uart_printf("Heap has 0x%llx bytes free.\n", memfree());
+    console_printf("Heap has 0x%llx bytes free.\n", memfree());
 }
 
 void kinit() {
-    uart_puts("Initialising kernel\n");
+    console_puts("Initialising kernel\n");
 
     // Initialise heap
     init_heap_metadata();
-    uart_printf("Heap has 0x%llx bytes.\n", memsize());
+    console_printf("Heap has 0x%llx bytes.\n", memsize());
 
     // Initialise process table
     init_process_table();
