@@ -54,23 +54,23 @@ process_switch_context:
 
     # Set program counter
     ld a1, 0x20(a0)
-    csrw mepc, a1
+    csrw sepc, a1
 
     # Enable mmu
-    li a1, 0x8000000000000000
-    csrw satp, a1
     ld a1, 0x18(a0)
     srli a1, a1, 12
-    csrs satp, a1
+    li a0, 0x8000000000000000
+    or a1, a0, a1
+    csrw satp, a1
     sfence.vma
 
     # Set ring to user ring
-    li a1, 0b11000000000
-    csrc mstatus, a1
+    li a1, 0x100
+    csrc sstatus, a1
 
     # a0, a1, and a2 are done last
     ld a1, 0x80(a0)
     ld a2, 0x88(a0)
     ld a0, 0x78(a0)
-    mret
+    sret
 

@@ -45,6 +45,14 @@ void map_mmu(mmu_level_1_t* top, void* virtual_, void* physical, char flags);
 // Allocates a new page to map to a given virtual address. Returns the physical address
 void* alloc_page_mmu(mmu_level_1_t* top, void* virtual_, char flags);
 
+// mmu_map_range_identity(mmu_level_1_t*, void*, void*, char) -> void
+// Maps a range onto itself in an mmu page table.
+void mmu_map_range_identity(mmu_level_1_t* top, void* start, void* end, char flags);
+
+// mmu_map_kernel(mmu_level_1_t*) -> void
+// Maps the kernel onto an mmu page table.
+void mmu_map_kernel(mmu_level_1_t* top);
+
 // unmap_mmu(mmu_level_1_t*, void*) -> void
 // Unmaps a page from the MMU structure.
 void unmap_mmu(mmu_level_1_t* top, void* virtual_);

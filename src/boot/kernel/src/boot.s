@@ -10,14 +10,19 @@ _start:
     mv fp, sp
 
     la a0, welcome_msg
-    call console_puts
+    jal console_puts
 
     # Set supervisor trap vector
     la t0, interrupt_handler
     csrw stvec, t0
 
     # Jump to kernel init
-    j kinit
+    la a0, kinit
+    csrw sepc, a0
+    la ra, interrupt_init
+    li a0, 0x100
+    csrs sstatus, a0
+    sret
 
 interrupt_init:
     # Enable all interrupts in the PLIC
@@ -47,8 +52,15 @@ interrupt_priority_set_loop:
     li t1, 0x0C200000
     sw zero, (t1)
 
+    # a0 contains the mmu page table structure
+    li t0, 0x8000000000000000
+    srli a0, a0, 12
+    or a0, a0, t0
+    csrw satp, a0
+    sfence.vma
+
     # Jump to kernel main
-    j kmain
+    jal kmain
 
 finish:
     j finish

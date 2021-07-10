@@ -70,11 +70,11 @@ void handle_interrupt(unsigned long long scause) {
             case 0x08:
                 user_syscall(0);
                 break;
+
             default:
                 console_printf("unknown synchronous interrupt: 0x%llx\n", scause);
-                break;
+                while (1);
         }
-        while (1);
     }
 }
 

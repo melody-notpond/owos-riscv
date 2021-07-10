@@ -64,6 +64,7 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
 
     process_t* process = fetch_process(pid);
     process->mmu_data = create_mmu_top();
+    mmu_map_kernel(process->mmu_data);
 
     void* last_pointer = 0;
     for (int i = 0; i < elf->header.program_header_num; i++) {

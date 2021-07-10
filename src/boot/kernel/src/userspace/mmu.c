@@ -8,15 +8,13 @@ mmu_level_1_t* create_mmu_top() {
     return config;
 }
 
-mmu_level_3_t* walk_mmu_and_get_pointer_to_pointer(mmu_level_1_t* top, void* virtual, int create_pages, unsigned char flags) {
-    flags &= ~(MMU_FLAG_READ | MMU_FLAG_WRITE | MMU_FLAG_EXEC | MMU_FLAG_ACCESSED | MMU_FLAG_DIRTY);
-
+mmu_level_3_t* walk_mmu_and_get_pointer_to_pointer(mmu_level_1_t* top, void* virtual, int create_pages) {
     // Top to level 2
-    unsigned long long i = (((unsigned long long) virtual) >> 12) & 0x1ff;
+    unsigned long long i = (((unsigned long long) virtual) >> 30) & 0x1ff;
     if (top[i].addr == (void*) 0) {
         if (create_pages) {
             top[i].raw = ((unsigned long long) alloc_page(1)) >> 2;
-            top[i].raw |= flags | MMU_FLAG_VALID;
+            top[i].raw |= MMU_FLAG_VALID;
         } else {
             return (void*) 0;
         }
@@ -29,7 +27,7 @@ mmu_level_3_t* walk_mmu_and_get_pointer_to_pointer(mmu_level_1_t* top, void* vir
     if (level2[i].addr == (void*) 0) {
         if (create_pages) {
             level2[i].raw = ((unsigned long long) alloc_page(1)) >> 2;
-            level2[i].raw |= flags | MMU_FLAG_VALID;
+            level2[i].raw |= MMU_FLAG_VALID;
         } else {
             return (void*) 0;
         }
@@ -38,7 +36,7 @@ mmu_level_3_t* walk_mmu_and_get_pointer_to_pointer(mmu_level_1_t* top, void* vir
 
     // Get page
     mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[i]);
-    i = (((unsigned long long) virtual) >> 30) & 0x1ff;
+    i = (((unsigned long long) virtual) >> 12) & 0x1ff;
     return level3 + i;
 }
 
@@ -50,7 +48,7 @@ void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
     virtual = (void*) (((unsigned long long) virtual) & ~0xfff);
 
     // Walk mmu and create pages along the way
-    mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1, flags);
+    mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1);
 
     if (level3 == (void*) 0) {
         console_printf("[map_mmu] Error mapping virtual address %p to physical address %p!\n", virtual, physical);
@@ -60,12 +58,12 @@ void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
         return;
     }
 
-    level3->raw = (unsigned long long) physical >> 2;
+    level3->raw = ((unsigned long long) physical) >> 2;
 
     // In addition to the flags provided by the standard, the 8th and 9th bits are reserved for software use
     // In our case, the 8th bit is used to keep track of whether the memory location was allocated with alloc_page().
     level3->raw &= ~0x100;
-    level3->raw |= (0b00011111 & flags) | MMU_FLAG_VALID;
+    level3->raw |= (0b00111111 & flags) | MMU_FLAG_VALID;
 }
 
 // alloc_page_mmu(mmu_level_1_t*, void*, char) -> void*
@@ -75,7 +73,7 @@ void* alloc_page_mmu(mmu_level_1_t* top, void* virtual, char flags) {
     virtual = (void*) (((unsigned long long) virtual) & ~0xfff);
 
     // Walk mmu and create pages along the way
-    mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1, flags);
+    mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1);
 
     if (level3 == (void*) 0) {
         console_printf("[alloc_page_mmu] Error allocating a page for virtual address %p!\n", virtual);
@@ -87,13 +85,44 @@ void* alloc_page_mmu(mmu_level_1_t* top, void* virtual, char flags) {
     }
 
     void* physical = alloc_page(1);
-    level3->raw = (((unsigned long long) physical) & ~0xfff) >> 2;
+    level3->raw = ((unsigned long long) physical) >> 2;
 
     // In addition to the flags provided by the standard, the 8th and 9th bits are reserved for software use
     // In our case, the 8th bit is used to keep track of whether the memory location was allocated with alloc_page().
     level3->raw |= 0x100;
-    level3->raw |= (0b00011111 & flags) | MMU_FLAG_VALID;
+    level3->raw |= (0b00111111 & flags) | MMU_FLAG_VALID;
     return physical;
+}
+
+// mmu_map_range_identity(mmu_level_1_t*, void*, void*, char) -> void
+// Maps a range onto itself in an mmu page table.
+void mmu_map_range_identity(mmu_level_1_t* top, void* start, void* end, char flags) {
+    start = (void*) (((unsigned long long) start) & ~0xfff);
+    end = (void*) ((((unsigned long long) end) + PAGE_SIZE - 1) & ~0xfff);
+
+    for (void* p = start; p < end; p += PAGE_SIZE) {
+        map_mmu(top, p, p, flags);
+    }
+}
+
+// mmu_map_kernel(mmu_level_1_t*) -> void
+// Maps the kernel onto an mmu page table.
+void mmu_map_kernel(mmu_level_1_t* top) {
+    extern int text_start;
+    extern int data_start;
+    extern int ro_data_start;
+    extern int sdata_start;
+    extern int stack_start;
+    extern int heap_bottom;
+    extern int pages_bottom;
+
+    mmu_map_range_identity(top, &text_start, &data_start, MMU_FLAG_READ | MMU_FLAG_EXEC);
+    mmu_map_range_identity(top, &data_start, &ro_data_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &ro_data_start, &sdata_start, MMU_FLAG_READ);
+    mmu_map_range_identity(top, &sdata_start, &stack_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &stack_start, &heap_bottom, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &heap_bottom, &pages_bottom, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    map_mmu(top, top, top, MMU_FLAG_READ | MMU_FLAG_WRITE);
 }
 
 // unmap_mmu(mmu_level_1_t*, void*) -> void
