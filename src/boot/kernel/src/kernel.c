@@ -16,11 +16,10 @@
 generic_dir_t* root;
 char running = 1;
 
-mmu_level_1_t* kinit() {
+void kinit() {
     console_puts("Initialising kernel\n");
 
     // Initialise heap
-    init_heap_metadata();
     console_printf("Heap has 0x%llx bytes.\n", memsize());
 
     // Initialise process table
@@ -44,11 +43,6 @@ mmu_level_1_t* kinit() {
 
     // Register file systems
     register_fs_mounter(ext2_mount);
-
-    // Create mmu page table
-    mmu_level_1_t* top = create_mmu_top();
-    mmu_map_kernel(top);
-    return top;
 }
 
 void kmain() {

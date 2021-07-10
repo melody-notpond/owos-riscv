@@ -56,13 +56,12 @@ process_switch_context:
     ld a1, 0x20(a0)
     csrw sepc, a1
 
-    # Enable mmu
+    # Get page table
     ld a1, 0x18(a0)
     srli a1, a1, 12
-    li a0, 0x8000000000000000
-    or a1, a0, a1
-    csrw satp, a1
-    sfence.vma
+    li a2, 0x8000000000000000
+    or a1, a2, a1
+    csrw sscratch, a1
 
     # Set ring to user ring
     li a1, 0x100
@@ -72,5 +71,11 @@ process_switch_context:
     ld a1, 0x80(a0)
     ld a2, 0x88(a0)
     ld a0, 0x78(a0)
+
+    # Set satp and jump to process
+    csrrw t0, sscratch, t0
+    csrw satp, t0
+    csrrw t0, sscratch, t0
+    sfence.vma
     sret
 

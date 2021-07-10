@@ -40,6 +40,21 @@ mmu_level_3_t* walk_mmu_and_get_pointer_to_pointer(mmu_level_1_t* top, void* vir
     return level3 + i;
 }
 
+// premap_mmu(mmu_level_1_t*, void*) -> void
+// Walks an mmu page table and allocates the missing entries on the way to the address that would be mapped to the virtual address given without allocating an address to the virtual address.
+void premap_mmu(mmu_level_1_t* top, void* virtual) {
+    walk_mmu_and_get_pointer_to_pointer(top, virtual, 1);
+}
+
+// walk_mmu(mmu_level_1_t*, void*) -> mmu_level_3_t
+// Walks an mmu page table and returns the physical address associated with the given virtual address. Returns null if unmapped.
+mmu_level_3_t walk_mmu(mmu_level_1_t* top, void* virtual) {
+    mmu_level_3_t* physical_ptr = walk_mmu_and_get_pointer_to_pointer(top, virtual, 0);
+    if (physical_ptr == (void*) 0)
+        return (mmu_level_3_t) { 0 };
+    return *physical_ptr;
+}
+
 // map_mmu(mmu_level_1_t*, void*, void*, char) -> void
 // Maps a virtual address to a physical address.
 void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
@@ -105,6 +120,10 @@ void mmu_map_range_identity(mmu_level_1_t* top, void* start, void* end, char fla
     }
 }
 
+// TODO: Figure out what addresses for hardware are being used via device trees.
+#include "../drivers/virtio/virtio.h"
+#include "../interrupts.h"
+
 // mmu_map_kernel(mmu_level_1_t*) -> void
 // Maps the kernel onto an mmu page table.
 void mmu_map_kernel(mmu_level_1_t* top) {
@@ -115,14 +134,42 @@ void mmu_map_kernel(mmu_level_1_t* top) {
     extern int stack_start;
     extern int heap_bottom;
     extern int pages_bottom;
+    extern void* pages_start;
 
+    // Map kernel
     mmu_map_range_identity(top, &text_start, &data_start, MMU_FLAG_READ | MMU_FLAG_EXEC);
     mmu_map_range_identity(top, &data_start, &ro_data_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &ro_data_start, &sdata_start, MMU_FLAG_READ);
     mmu_map_range_identity(top, &sdata_start, &stack_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &stack_start, &heap_bottom, MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &heap_bottom, &pages_bottom, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &pages_bottom, pages_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
+
+    // Map virtio stuff
+    mmu_map_range_identity(top, (void*) VIRTIO_MMIO_BASE, (void*) (VIRTIO_MMIO_TOP + VIRTIO_MMIO_INTERVAL), MMU_FLAG_READ | MMU_FLAG_WRITE);
+
+    // Map interrupt stuff
+    mmu_map_range_identity(top, (void*) PLIC_BASE, (void*) (PLIC_BASE + PLIC_COUNT), MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) PLIC_CLAIM, (void*) (PLIC_CLAIM + 1), MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) 0x0c002000, (void*) (0x0c002000 + 1), MMU_FLAG_READ | MMU_FLAG_WRITE);
+
+    // Map mmu
     map_mmu(top, top, top, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    for (int i = 0; i < (int) (PAGE_SIZE / sizeof(void*)); i++) {
+        mmu_level_2_t* level2 = MMU_UNWRAP(2, top[i]);
+        if (level2 == (void*) 0)
+            continue;
+
+        map_mmu(top, level2, level2, MMU_FLAG_READ | MMU_FLAG_WRITE);
+
+        for (int j = 0; j < (int) (PAGE_SIZE / sizeof(void*)); j++) {
+            mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[j]);
+            if (level3 == (void*) 0)
+                continue;
+
+            map_mmu(top, level3, level3, MMU_FLAG_READ | MMU_FLAG_WRITE);
+        }
+    }
 }
 
 // unmap_mmu(mmu_level_1_t*, void*) -> void

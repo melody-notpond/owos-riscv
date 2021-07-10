@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "../userspace/mmu.h"
 #include "../drivers/console/console.h"
 
 // TODO: figure out how to make this dependent on how much memory is detected
@@ -42,21 +43,21 @@ void init_heap_metadata() {
 // is_free(page_t*) -> char
 // Checks if a page is free. Returns true if free.
 char is_free(page_t* ptr) {
-    char* cp = ((char*) &pages_bottom) + (((char*) ptr) - (char*) pages_start) / PAGE_SIZE;
+    char* cp = ((char*) &pages_bottom) + (((unsigned long long) ptr) - (unsigned long long) pages_start) / PAGE_SIZE;
     return *cp == PAGE_ALLOC_BYTE_FREE;
 }
 
 // is_used(page_t*) -> char
 // Checks if a page is used. Returns true if used.
 char is_used(page_t* ptr) {
-    char* cp = ((char*) &pages_bottom) + (((char*) ptr) - (char*) pages_start) / PAGE_SIZE;
+    char* cp = ((char*) &pages_bottom) + (((unsigned long long) ptr) - (unsigned long long) pages_start) / PAGE_SIZE;
     return *cp != PAGE_ALLOC_BYTE_FREE;
 }
 
 // is_last(page_t*) -> char
 // Checks if a page is the last page in an allocation. Returns true if that is the case.
 char is_last(page_t* ptr) {
-    char* cp = ((char*) &pages_bottom) + (((char*) ptr) - (char*) pages_start) / PAGE_SIZE;
+    char* cp = ((char*) &pages_bottom) + (((unsigned long long) ptr) - (unsigned long long) pages_start) / PAGE_SIZE;
     return (*cp & PAGE_ALLOC_BYTE_LAST) != 0;
 }
 
@@ -65,6 +66,14 @@ char is_last(page_t* ptr) {
 void* alloc_page(unsigned long long page_count) {
     if (page_count == 0)
         return (void*) 0;
+
+    // Get mmu if available
+    volatile unsigned long long mmu = 0;
+    mmu_level_1_t* top = (void*) 0;
+    asm volatile("csrr %0, satp" : "=r" (mmu));
+    if (mmu & 0x8000000000000000) {
+        top = (void*) ((mmu & 0x00000fffffffffff) << 12);
+    }
 
     page_t* ptr = pages_start;
     page_t* pages_end = pages_start + HEAP_SIZE;
@@ -83,9 +92,31 @@ void* alloc_page(unsigned long long page_count) {
             }
 
             if (free) {
+                if (top != (void*) 0) {
+                    // Add pages to mmu if necessary
+                    for (page_t* p = ptr; p < end; p++) {
+                        premap_mmu(top, p);
+                    }
+
+                    // Check if still free
+                    for (page_t* p = ptr + 1; p < end; p++) {
+                        if (is_used(p)) {
+                            free = 0;
+                            break;
+                        }
+                    }
+
+                    // Map page
+                    if (free) {
+                        for (page_t* p = ptr; p < end; p++) {
+                            map_mmu(top, p, p, MMU_FLAG_READ | MMU_FLAG_WRITE);
+                        }
+                    } else continue;
+                }
+
                 // Clear pages
                 volatile unsigned long long* big_ptr = (unsigned long long*) ptr;
-                for (; big_ptr <= (unsigned long long*) ((void*) end); big_ptr++) {
+                for (; big_ptr < (unsigned long long*) ((void*) end); big_ptr++) {
                     *big_ptr = 0;
                 }
 
@@ -103,6 +134,7 @@ void* alloc_page(unsigned long long page_count) {
     }
 
     // No pointer was found; return null
+    console_printf("[alloc_page] Error: Could not allocate %lli consecutive pages!\n", page_count);
     return (void*) 0;
 }
 

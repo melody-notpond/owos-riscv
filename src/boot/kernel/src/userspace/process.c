@@ -71,7 +71,7 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
         unsigned long long j;
         void* ptr = (void*) elf->program_headers[i].virtual_address;
         for (j = 0; j < elf->program_headers[i].file_size; j += MMU_PAGE_SIZE) {
-            void* page = alloc_page_mmu(process->mmu_data, ptr, MMU_FLAG_EXEC | MMU_FLAG_READ);
+            void* page = alloc_page_mmu(process->mmu_data, ptr, MMU_FLAG_EXEC | MMU_FLAG_READ | MMU_FLAG_USER | MMU_FLAG_WRITE);
             unsigned long long size = elf->program_headers[i].file_size - j;
             memcpy(page, elf->data[i] + j, size < MMU_PAGE_SIZE ? size : MMU_PAGE_SIZE);
             ptr += MMU_PAGE_SIZE;
@@ -82,7 +82,7 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
     }
 
     for (unsigned int i = 0; i < stack_page_count; i++) {
-        alloc_page_mmu(process->mmu_data, last_pointer, MMU_FLAG_READ | MMU_FLAG_WRITE);
+        alloc_page_mmu(process->mmu_data, last_pointer, MMU_FLAG_READ | MMU_FLAG_WRITE | MMU_FLAG_USER);
         last_pointer += MMU_PAGE_SIZE;
     }
 

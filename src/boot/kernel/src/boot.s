@@ -4,8 +4,8 @@
 
 _start:
     # Initialise stack pointer and mscratch
-    la sp, isr_stack_end
-    csrrw sp, sscratch, sp
+    #la sp, isr_stack_end
+    #csrrw sp, sscratch, sp
     la sp, stack_top
     mv fp, sp
 
@@ -16,11 +16,25 @@ _start:
     la t0, interrupt_handler
     csrw stvec, t0
 
+    # Set up mmu
+    jal init_heap_metadata
+    jal create_mmu_top
+    csrw sscratch, a0
+    jal mmu_map_kernel
+    csrr a0, sscratch
+
+    # Enable the mmu
+    li t0, 0x8000000000000000
+    srli a0, a0, 12
+    or a0, a0, t0
+    csrw satp, a0
+    sfence.vma
+
     # Jump to kernel init
     la a0, kinit
     csrw sepc, a0
     la ra, interrupt_init
-    li a0, 0x100
+    li a0, 0x40100
     csrs sstatus, a0
     sret
 
@@ -51,13 +65,6 @@ interrupt_priority_set_loop:
     # Set priority threshold
     li t1, 0x0C200000
     sw zero, (t1)
-
-    # a0 contains the mmu page table structure
-    li t0, 0x8000000000000000
-    srli a0, a0, 12
-    or a0, a0, t0
-    csrw satp, a0
-    sfence.vma
 
     # Jump to kernel main
     jal kmain

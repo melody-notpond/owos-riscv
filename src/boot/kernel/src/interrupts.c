@@ -1,9 +1,8 @@
+#include "interrupts.h"
 #include "userspace/syscall.h"
 #include "drivers/console/console.h"
 
 //#define INTERRUPT_DEBUG
-#define PLIC_BASE  0x0c000000
-#define PLIC_CLAIM 0x0c200004
 
 // Interrupt handlers
 void (*mei_interrupt_handlers[53])(unsigned int) = { 0 };
@@ -12,7 +11,7 @@ void (*mei_interrupt_handlers[53])(unsigned int) = { 0 };
 // Registers a machine external interrupt with a given mei id, priority, and handler. If the priority is 0, then the interrupt is disabled. Returns 0 on successful registration, 1 on failure.
 char register_mei_handler(unsigned int mei_id, unsigned char priority, void (*mei_handler)(unsigned int)) {
     // Register
-    if (0 < mei_id && mei_id <= 53 && mei_interrupt_handlers[mei_id - 1] == 0) {
+    if (0 < mei_id && mei_id <= PLIC_COUNT && mei_interrupt_handlers[mei_id - 1] == 0) {
         mei_interrupt_handlers[mei_id - 1] = mei_handler;
         *(((unsigned int*) PLIC_BASE) + mei_id) = priority;
         return 0;
@@ -39,12 +38,11 @@ void handle_mei() {
     void (*mei_handler)(unsigned int) = mei_interrupt_handlers[mei_id - 1];
     if (mei_handler)
         mei_handler(mei_id);
-
 }
 
-// handle_interrupt(unsigned long long) -> void
-// Called by the interrupt handler to dispatch the interrupt.
-void handle_interrupt(unsigned long long scause) {
+// handle_interrupt(unsigned long long) -> unsigned long long
+// Called by the interrupt handler to dispatch the interrupt. Returns the new value of sepc.
+unsigned long long handle_interrupt(unsigned long long scause, unsigned long long sepc) {
     // Debug stuff
 #ifdef INTERRUPT_DEBUG
     console_puts("Interrupt received: 0x");
@@ -69,6 +67,7 @@ void handle_interrupt(unsigned long long scause) {
             // User mode syscall
             case 0x08:
                 user_syscall(0);
+                sepc += 4;
                 break;
 
             default:
@@ -76,5 +75,7 @@ void handle_interrupt(unsigned long long scause) {
                 while (1);
         }
     }
+
+    return sepc;
 }
 

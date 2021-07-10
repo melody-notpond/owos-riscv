@@ -4,7 +4,7 @@
 
 interrupt_handler:
     # Push registers
-    csrrw sp, sscratch, sp
+    #csrrw sp, sscratch, sp
     addi sp, sp, -0x200
     sd x1, 0x08(sp)
     sd x3, 0x18(sp)
@@ -41,6 +41,7 @@ interrupt_handler:
     csrr a0, scause
     csrr a1, sepc
     jal handle_interrupt
+    csrw sepc, a0
 
     # Pop registers
     ld x1, 0x08(sp)
@@ -74,14 +75,16 @@ interrupt_handler:
     ld x30, 0xf0(sp)
     ld x31, 0xf8(sp)
     addi sp, sp, 0x200
-    csrrw sp, sscratch, sp
-    mret
+    #csrrw sp, sscratch, sp
+    sret
 
 
 # Stack stuff
+/*
 .section .bss
 .align 4
 isr_stack_start:
     .skip 8192
 isr_stack_end:
 .global isr_stack_end
+*/

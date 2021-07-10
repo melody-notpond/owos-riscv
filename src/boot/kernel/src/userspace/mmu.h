@@ -37,6 +37,10 @@ typedef union {
 // Creates an MMU data structure.
 mmu_level_1_t* create_mmu_top();
 
+// premap_mmu(mmu_level_1_t*, void*) -> void
+// Walks an mmu page table and allocates the missing entries on the way to the address that would be mapped to the virtual address given without allocating an address to the virtual address.
+void premap_mmu(mmu_level_1_t* top, void* _virtual);
+
 // map_mmu(mmu_level_1_t*, void*, void*, char) -> void
 // Maps a virtual address to a physical address.
 void map_mmu(mmu_level_1_t* top, void* virtual_, void* physical, char flags);
@@ -44,6 +48,10 @@ void map_mmu(mmu_level_1_t* top, void* virtual_, void* physical, char flags);
 // alloc_page_mmu(mmu_level_1_t*, void*, char) -> void*
 // Allocates a new page to map to a given virtual address. Returns the physical address
 void* alloc_page_mmu(mmu_level_1_t* top, void* virtual_, char flags);
+
+// walk_mmu(mmu_level_1_t*, void*) -> mmu_level_3_t
+// Walks an mmu page table and returns the physical address associated with the given virtual address. Returns null if unmapped.
+mmu_level_3_t walk_mmu(mmu_level_1_t* top, void* _virtual);
 
 // mmu_map_range_identity(mmu_level_1_t*, void*, void*, char) -> void
 // Maps a range onto itself in an mmu page table.
