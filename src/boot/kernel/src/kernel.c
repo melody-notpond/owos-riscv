@@ -79,28 +79,27 @@ void kmain() {
     }
     */
 
-    // Load /bin/simple
-    elf_t simple = load_executable_elf_from_file(root, "/bin/simple");
-    pid_t simpled = load_elf_as_process(0, &simple, 1);
-    free_elf(&simple);
+    // MMU is definitely enabled here, so get page table and mark all nonmeta entries as global
+    unsigned long long mmu;
+    mmu_level_1_t* top = (void*) 0;
+    asm volatile("csrr %0, satp" : "=r" (mmu));
+    top = (void*) ((mmu & 0x00000fffffffffff) << 12);
+    make_all_global(top);
 
-    // Jump to simple process
-    console_puts("Loaded simpled.\n");
-    jump_to_process(simpled);
+    // Load /sbin/init
+    elf_t init = load_executable_elf_from_file(root, "/sbin/init");
+    pid_t initd = load_elf_as_process(0, &init, 1);
+    free_elf(&init);
 
-    /*
-    // Hang
-    while (running) {
-        console_getc();
-    }
+    // Load the new page table and clean up the old page table
+    mmu_level_1_t* new_top = fetch_process(initd)->mmu_data;
+    copy_mmu_globals(new_top, top);
+    mmu = 0x8000000000000000 | (((unsigned long long) new_top) >> 12);
+    asm volatile("csrw satp, %0" : "=r" (mmu));
+    clean_mmu_mappings(top, 0);
 
-    kshell_main();
-
-    cleanup_directory(root);
-    unmount_generic_dir(root);
-    clean_virtio_block_devices();
-
-    console_printf("Heap has 0x%llx bytes free.\n", memfree());
-    */
+    // Jump to init process
+    console_puts("Loaded initd.\n");
+    jump_to_process(initd);
 }
 

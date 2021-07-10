@@ -7,7 +7,7 @@ all: kernel
 run:
 	$(EMU) $(EFLAGS) -kernel build/boot/kernel -drive if=none,format=raw,file=build/drive.iso,id=foo
 
-iso: kernel etc bin
+iso: kernel etc bin sbin
 	ls build/drive.iso || dd if=/dev/zero of=build/drive.iso bs=1M count=2048
 	mkfs.ext2 -F build/drive.iso
 	mkdir -p mnt
@@ -16,6 +16,7 @@ mount: iso
 	sudo mount build/drive.iso mnt
 	sudo chown -R $(shell whoami) mnt
 	cp -r build/root/* mnt/
+	sudo chown root:root -R mnt/sbin
 	sudo umount mnt
 
 kernel: dirs
@@ -27,12 +28,18 @@ etc: dirs
 
 bin: simple
 
+sbin: init
+
 simple: dirs
 	cd $(CODE)root/bin/simple && $(MAKE)
 	mv $(CODE)root/bin/simple/simple build/root/bin/
 
+init: dirs
+	cd $(CODE)root/sbin/init && $(MAKE)
+	mv $(CODE)root/sbin/init/init build/root/sbin
+
 dirs:
-	mkdir -p build/root/bin/ build/boot/ build/root/etc/
+	mkdir -p build/root/bin/ build/boot/ build/root/etc/ build/root/sbin
 
 clean:
 	-rm -r build/

@@ -61,13 +61,21 @@ void mmu_map_range_identity(mmu_level_1_t* top, void* start, void* end, char fla
 // Maps the kernel onto an mmu page table.
 void mmu_map_kernel(mmu_level_1_t* top);
 
+// copy_mmu_globals(mmu_level_1_t*, mmu_level_1_t*) -> void
+// Copies the global mappings from one page table to another.
+void copy_mmu_globals(mmu_level_1_t* dest, mmu_level_1_t* src);
+
+// make_all_global(mmu_level_1_t*) -> void
+// Makes all entries of the page table (except for meta entries) global.
+void make_all_global(mmu_level_1_t* kernel_mapping);
+
 // unmap_mmu(mmu_level_1_t*, void*) -> void
 // Unmaps a page from the MMU structure.
 void unmap_mmu(mmu_level_1_t* top, void* virtual_);
 
-// clean_mmu_mappings(mmu_level_1_t*) -> void
+// clean_mmu_mappings(mmu_level_1_t*, char) -> void
 // Deallocates all pages associated with an MMU structure.
-void clean_mmu_mappings(mmu_level_1_t* top);
+void clean_mmu_mappings(mmu_level_1_t* top, char force);
 
 #endif /* KERNEL_MMU_H */
 

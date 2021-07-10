@@ -137,21 +137,21 @@ void mmu_map_kernel(mmu_level_1_t* top) {
     extern void* pages_start;
 
     // Map kernel
-    mmu_map_range_identity(top, &text_start, &data_start, MMU_FLAG_READ | MMU_FLAG_EXEC);
-    mmu_map_range_identity(top, &data_start, &ro_data_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, &ro_data_start, &sdata_start, MMU_FLAG_READ);
-    mmu_map_range_identity(top, &sdata_start, &stack_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, &stack_start, &heap_bottom, MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, &heap_bottom, &pages_bottom, MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, &pages_bottom, pages_start, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &text_start, &data_start,       MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_EXEC);
+    mmu_map_range_identity(top, &data_start, &ro_data_start,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &ro_data_start, &sdata_start,   MMU_FLAG_GLOBAL | MMU_FLAG_READ);
+    mmu_map_range_identity(top, &sdata_start, &stack_start,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &stack_start, &heap_bottom,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &heap_bottom, &pages_bottom,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &pages_bottom, pages_start,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     // Map virtio stuff
-    mmu_map_range_identity(top, (void*) VIRTIO_MMIO_BASE, (void*) (VIRTIO_MMIO_TOP + VIRTIO_MMIO_INTERVAL), MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) VIRTIO_MMIO_BASE, (void*) (VIRTIO_MMIO_TOP + VIRTIO_MMIO_INTERVAL), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     // Map interrupt stuff
-    mmu_map_range_identity(top, (void*) PLIC_BASE, (void*) (PLIC_BASE + PLIC_COUNT), MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, (void*) PLIC_CLAIM, (void*) (PLIC_CLAIM + 1), MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, (void*) 0x0c002000, (void*) (0x0c002000 + 1), MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) PLIC_BASE, (void*) (PLIC_BASE + PLIC_COUNT),    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) PLIC_CLAIM, (void*) (PLIC_CLAIM + 1),           MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) 0x0c002000, (void*) (0x0c002000 + 1),           MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     // Map mmu
     map_mmu(top, top, top, MMU_FLAG_READ | MMU_FLAG_WRITE);
@@ -168,6 +168,99 @@ void mmu_map_kernel(mmu_level_1_t* top) {
                 continue;
 
             map_mmu(top, level3, level3, MMU_FLAG_READ | MMU_FLAG_WRITE);
+        }
+    }
+}
+
+// copy_mmu_globals(mmu_level_1_t*, mmu_level_1_t*) -> void
+// Copies the global mappings from one page table to another.
+void copy_mmu_globals(mmu_level_1_t* dest, mmu_level_1_t* src) {
+    for (int i = 0; i < (int) (PAGE_SIZE / sizeof(void*)); i++) {
+        mmu_level_2_t* level2 = MMU_UNWRAP(2, src[i]);
+        if (level2 == (void*) 0)
+            continue;
+
+        for (int j = 0; j < (int) (PAGE_SIZE / sizeof(void*)); j++) {
+            mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[j]);
+            if (level3 == (void*) 0)
+                continue;
+
+            for (int k = 0; k < (int) (PAGE_SIZE / sizeof(void*)); k++) {
+                if (level3[k].raw & MMU_FLAG_GLOBAL) {
+                    void* physical = MMU_UNWRAP(4, level3[k]);
+                    map_mmu(dest, physical, physical, level3[k].raw & 0xff);
+                }
+            }
+        }
+    }
+
+
+    // Map mmu
+    map_mmu(dest, dest, dest, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    for (int i = 0; i < (int) (PAGE_SIZE / sizeof(void*)); i++) {
+        mmu_level_2_t* level2 = MMU_UNWRAP(2, dest[i]);
+        if (level2 == (void*) 0)
+            continue;
+
+        map_mmu(dest, level2, level2, MMU_FLAG_READ | MMU_FLAG_WRITE);
+
+        for (int j = 0; j < (int) (PAGE_SIZE / sizeof(void*)); j++) {
+            mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[j]);
+            if (level3 == (void*) 0)
+                continue;
+
+            map_mmu(dest, level3, level3, MMU_FLAG_READ | MMU_FLAG_WRITE);
+        }
+    }
+}
+
+// make_all_global(mmu_level_1_t*) -> void
+// Makes all entries of the page table (except for meta entries) global.
+void make_all_global(mmu_level_1_t* kernel_mapping) {
+    for (int i = 0; i < (int) (PAGE_SIZE / sizeof(void*)); i++) {
+        mmu_level_2_t* level2 = MMU_UNWRAP(2, kernel_mapping[i]);
+        if (level2 == (void*) 0)
+            continue;
+
+        for (int j = 0; j < (int) (PAGE_SIZE / sizeof(void*)); j++) {
+            mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[j]);
+            if (level3 == (void*) 0)
+                continue;
+
+            for (int k = 0; k < (int) (PAGE_SIZE / sizeof(void*)); k++) {
+                void* physical = MMU_UNWRAP(4, level3[k]);
+                if (physical ==(void*) 0 || physical == kernel_mapping)
+                    continue;
+
+                // Check if the physical address is part of the mmu metamapping
+                char mmu = 0;
+                for (int i = 0; i < (int) (PAGE_SIZE / sizeof(void*)); i++) {
+                    mmu_level_2_t* level2 = MMU_UNWRAP(2, kernel_mapping[i]);
+                    if (level2 == (void*) 0)
+                        continue;
+
+                    if (level2 == physical) {
+                        mmu = 1;
+                        break;
+                    }
+
+                    for (int j = 0; j < (int) (PAGE_SIZE / sizeof(void*)); j++) {
+                        mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[j]);
+                        if (level3 == (void*) 0)
+                            continue;
+
+                        if (level3 == physical) {
+                            mmu = 1;
+                            break;
+                        }
+                    }
+
+                    if (mmu) break;
+                }
+
+                if (!mmu)
+                    level3[k].raw |= MMU_FLAG_GLOBAL;
+            }
         }
     }
 }
@@ -203,9 +296,9 @@ void unmap_mmu(mmu_level_1_t* top, void* virtual) {
     level3[k].addr = 0;
 }
 
-// clean_mmu_mappings(mmu_level_1_t*) -> void
+// clean_mmu_mappings(mmu_level_1_t*, char) -> void
 // Deallocates all pages associated with an MMU structure.
-void clean_mmu_mappings(mmu_level_1_t* top) {
+void clean_mmu_mappings(mmu_level_1_t* top, char force) {
     if (top == (void*) 0)
         return;
 
@@ -220,7 +313,7 @@ void clean_mmu_mappings(mmu_level_1_t* top) {
                 continue;
 
             for (int k = 0; k < (int) (PAGE_SIZE / sizeof(void*)); k++) {
-                if (level3[k].raw & 0x100)
+                if ((level3[k].raw & 0x100) && (force || !(level3[k].raw & MMU_FLAG_GLOBAL)))
                     dealloc_page(MMU_UNWRAP(4, level3[k]));
             }
 

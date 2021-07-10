@@ -28,7 +28,7 @@ _start:
     srli a0, a0, 12
     or a0, a0, t0
     csrw satp, a0
-    sfence.vma
+    sfence.vma zero, zero
 
     # Jump to kernel init
     la a0, kinit

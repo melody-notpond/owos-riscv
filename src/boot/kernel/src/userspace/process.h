@@ -34,6 +34,10 @@ void init_process_table();
 // Spawns a process given its parent process. Returns -1 if unsuccessful.
 pid_t spawn_process(pid_t parent_pid);
 
+// fetch_process(pid_t) -> process_t*
+// Fetches a process from the process table.
+process_t* fetch_process(pid_t pid);
+
 // load_elf_as_process(pid_t, elf_t*) -> pid_t
 // Uses an elf file as a process.
 pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_count);

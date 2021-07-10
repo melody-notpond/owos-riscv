@@ -75,7 +75,8 @@ process_switch_context:
     # Set satp and jump to process
     csrrw t0, sscratch, t0
     csrw satp, t0
+    mv t0, zero
+    sfence.vma zero, t0
     csrrw t0, sscratch, t0
-    sfence.vma
     sret
 
