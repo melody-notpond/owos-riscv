@@ -9,8 +9,24 @@ _start:
     la sp, stack_top
     mv fp, sp
 
-    la a0, welcome_msg
+    la a0, welcome_msg0
     jal console_puts
+
+    la a0, welcome_msg1
+    jal console_puts
+
+    la a0, welcome_msg2
+    jal console_puts
+
+    la a0, welcome_msg3
+    jal console_puts
+
+    la a0, welcome_msg4
+    jal console_puts
+
+    la a0, welcome_msg5
+    jal console_puts
+
 
     # Set supervisor trap vector
     la t0, interrupt_handler
@@ -57,9 +73,9 @@ interrupt_priority_set_loop:
     #*/
 
     # Enable interrupts
-    li t0, 0x200
+    li t0, 0x202
     csrs sie, t0
-    li t0, 0x2
+    li t0, 0x22
     csrs sstatus, t0
 
     # Set priority threshold
@@ -74,13 +90,16 @@ finish:
 
 
 .section .rodata
-welcome_msg:
-    .string "                 _____ ___   
-                (  _  )  _ \\ 
-   _   _   _   _| ( ) | (_(_)
- / _ \\( ) ( ) ( ) | | |\\__ \\ 
-( (_) ) \\_/ \\_/ | (_) | )_) |
- \\___/ \\__/\\___/(_____)\\____)
-"
-    .byte 0
+welcome_msg0:
+    .string "                 _____ ___   \n"
+welcome_msg1:
+    .string "                (  _  )  _ \\\n"
+welcome_msg2:
+    .string "   _   _   _   _| ( ) | (_(_)\n"
+welcome_msg3:
+    .string " / _ \\( ) ( ) ( ) | | |\\__ \\ \n"
+welcome_msg4:
+    .string "( (_) ) \\_/ \\_/ | (_) | )_) |\n"
+welcome_msg5:
+    .string " \\___/ \\__/\\___/(_____)\\____)\n"
 

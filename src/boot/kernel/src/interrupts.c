@@ -1,4 +1,5 @@
 #include "interrupts.h"
+#include "userspace/process.h"
 #include "userspace/syscall.h"
 #include "drivers/console/console.h"
 
@@ -40,9 +41,13 @@ void handle_mei() {
         mei_handler(mei_id);
 }
 
-// handle_interrupt(unsigned long long) -> unsigned long long
+struct s_trap {
+    unsigned long long xs[32];
+};
+
+// handle_interrupt(unsigned long long, unsigned long long, struct s_trap) -> unsigned long long
 // Called by the interrupt handler to dispatch the interrupt. Returns the new value of sepc.
-unsigned long long handle_interrupt(unsigned long long scause, unsigned long long sepc) {
+unsigned long long handle_interrupt(unsigned long long scause, unsigned long long sepc, struct s_trap* trap_struct) {
     // Debug stuff
 #ifdef INTERRUPT_DEBUG
     console_puts("Interrupt received: 0x");
@@ -66,7 +71,15 @@ unsigned long long handle_interrupt(unsigned long long scause, unsigned long lon
         switch (scause) {
             // User mode syscall
             case 0x08:
-                user_syscall(0);
+                user_syscall(
+                    trap_struct->xs[PROCESS_REGISTER_A7],
+                    trap_struct->xs[PROCESS_REGISTER_A0],
+                    trap_struct->xs[PROCESS_REGISTER_A1],
+                    trap_struct->xs[PROCESS_REGISTER_A2],
+                    trap_struct->xs[PROCESS_REGISTER_A3],
+                    trap_struct->xs[PROCESS_REGISTER_A4],
+                    trap_struct->xs[PROCESS_REGISTER_A5]
+                );
                 sepc += 4;
                 break;
 

@@ -229,7 +229,7 @@ void make_all_global(mmu_level_1_t* kernel_mapping) {
 
             for (int k = 0; k < (int) (PAGE_SIZE / sizeof(void*)); k++) {
                 void* physical = MMU_UNWRAP(4, level3[k]);
-                if (physical ==(void*) 0 || physical == kernel_mapping)
+                if (physical == (void*) 0 || physical == kernel_mapping)
                     continue;
 
                 // Check if the physical address is part of the mmu metamapping

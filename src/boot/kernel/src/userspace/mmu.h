@@ -71,7 +71,7 @@ void make_all_global(mmu_level_1_t* kernel_mapping);
 
 // unmap_mmu(mmu_level_1_t*, void*) -> void
 // Unmaps a page from the MMU structure.
-void unmap_mmu(mmu_level_1_t* top, void* virtual_);
+void unmap_mmu(mmu_level_1_t* top, void* _virtual);
 
 // clean_mmu_mappings(mmu_level_1_t*, char) -> void
 // Deallocates all pages associated with an MMU structure.

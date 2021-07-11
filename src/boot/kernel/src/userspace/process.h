@@ -4,8 +4,38 @@
 #include "elffile.h"
 #include "mmu.h"
 
-#define PROCESS_REGISTER_SP 2
-#define PROCESS_REGISTER_FP 8
+#define PROCESS_REGISTER_ZERO   0
+#define PROCESS_REGISTER_RA     1
+#define PROCESS_REGISTER_SP     2
+#define PROCESS_REGISTER_GP     3
+#define PROCESS_REGISTER_TP     4
+#define PROCESS_REGISTER_T0     5
+#define PROCESS_REGISTER_T1     6
+#define PROCESS_REGISTER_T2     7
+#define PROCESS_REGISTER_FP     8
+#define PROCESS_REGISTER_S1     9
+#define PROCESS_REGISTER_A0    10
+#define PROCESS_REGISTER_A1    11
+#define PROCESS_REGISTER_A2    12
+#define PROCESS_REGISTER_A3    13
+#define PROCESS_REGISTER_A4    14
+#define PROCESS_REGISTER_A5    15
+#define PROCESS_REGISTER_A6    16
+#define PROCESS_REGISTER_A7    17
+#define PROCESS_REGISTER_S2    18
+#define PROCESS_REGISTER_S3    19
+#define PROCESS_REGISTER_S4    20
+#define PROCESS_REGISTER_S5    21
+#define PROCESS_REGISTER_S6    22
+#define PROCESS_REGISTER_S7    23
+#define PROCESS_REGISTER_S8    24
+#define PROCESS_REGISTER_S9    25
+#define PROCESS_REGISTER_S10   26
+#define PROCESS_REGISTER_S11   27
+#define PROCESS_REGISTER_T3    28
+#define PROCESS_REGISTER_T4    29
+#define PROCESS_REGISTER_T5    30
+#define PROCESS_REGISTER_T6    31
 
 typedef enum {
     PROCESS_STATE_DEAD,
@@ -47,4 +77,5 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
 void jump_to_process(pid_t pid);
 
 #endif /* KERNEL_PROCESS_H */
+#define PROCESS_REGISTER_SP 2
 
