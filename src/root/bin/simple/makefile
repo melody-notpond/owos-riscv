@@ -4,7 +4,7 @@ CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nost
 
 .PHONY: all clean
 
-all: $(CODE)simple.c
+all: $(CODE)*.c $(CODE)*.s
 	$(CC) $(CFLAGS) $? -o simple
 
 clean:

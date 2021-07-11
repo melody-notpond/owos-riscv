@@ -3,18 +3,15 @@
 .global sbi_console_putchar
 .global sbi_console_getchar
 
+.global sbi_hart_start
+.global sbi_hart_stop
+.global sbi_hart_get_status
+
+# EIDs are stored in a7
+# FIDs are stored in a6
+
 # sbi_console_putchar(char) -> void
 # Puts a character onto the UART port.
-#
-# Parameters:
-# a1: char      - The character to be printed out.
-# Returns: nothing
-# a0 - Error
-# a1 - Value
-# Used registers:
-# - a0
-# - a6
-# - a7
 sbi_console_putchar:
     li a6, 0
     li a7, 1
@@ -23,17 +20,32 @@ sbi_console_putchar:
 
 # sbi_console_getchar() -> int
 # Puts a character onto the UART port.
-#
-# Parameters: nothing
-# Returns:
-# a0 - Error
-# a1 - The charater that was received.
-# Used registers:
-# - a0
-# - a6
-# - a7
 sbi_console_getchar:
     li a6, 0
     li a7, 2
+    ecall
+    ret
+
+# sbi_hart_start(unsigned long, unsigned long, unsigned long) -> struct sbiret
+# Starts a hart at the given start address with the given opaque data.
+sbi_hart_start:
+    li a6, 0
+    li a7, 0x48534d
+    ecall
+    ret
+
+# sbi_hart_stop(void) -> struct sbiret
+# Stops a hart.
+sbi_hart_stop:
+    li a6, 1
+    li a7, 0x48534d
+    ecall
+    ret
+
+# sbi_hart_get_status(unsigned long) -> struct sbiret
+# Gets the current status of a hart.
+sbi_hart_get_status:
+    li a6, 2
+    li a7, 0x48534d
     ecall
     ret

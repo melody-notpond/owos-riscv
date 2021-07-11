@@ -2,28 +2,27 @@
 .global _start
 .global interrupt_init
 
+# a0 - current hart id
+# a1 - pointer to flattened device tree
 _start:
-    # Initialise stack pointer and mscratch
-    #la sp, isr_stack_end
-    #csrrw sp, sscratch, sp
+    # Initialise stack pointer
     la sp, stack_top
     mv fp, sp
 
+    mv t5, a0
+    mv t6, a1
+
+    # Print out welcome message
     la a0, welcome_msg0
     jal console_puts
-
     la a0, welcome_msg1
     jal console_puts
-
     la a0, welcome_msg2
     jal console_puts
-
     la a0, welcome_msg3
     jal console_puts
-
     la a0, welcome_msg4
     jal console_puts
-
     la a0, welcome_msg5
     jal console_puts
 
@@ -48,47 +47,21 @@ _start:
     # Jump to kernel init
     la a0, kinit
     csrw sepc, a0
-    la ra, interrupt_init
-    li a0, 0x40100
+    la ra, kmain
+    li a0, 0x40122
     csrs sstatus, a0
+    mv a0, t5
+    mv a1, t6
     sret
-
-interrupt_init:
-    # Enable all interrupts in the PLIC
-    li t0, 0xffffffff
-    li t1, 0x0c002000
-    sw t0, (t1)
-    sw t0, 0x4(t1)
-
-    /* This is for debugging purposes
-    # Set interrupt priorities
-    li t0, 0x7
-    li t1, 0x0c000004
-    li t2, 0x0c0000d9
-interrupt_priority_set_loop:
-    sw t0, (t1)
-    addi t1, t1, 0x4
-    blt t1, t2, interrupt_priority_set_loop
-    #*/
-
-    # Enable interrupts
-    li t0, 0x202
-    csrs sie, t0
-    li t0, 0x22
-    csrs sstatus, t0
-
-    # Set priority threshold
-    li t1, 0x0C200000
-    sw zero, (t1)
-
-    # Jump to kernel main
-    jal kmain
 
 finish:
     j finish
 
 
 .section .rodata
+hart_init_message:
+    .string "Initialised hart 0x%llx\n"
+
 welcome_msg0:
     .string "                 _____ ___   \n"
 welcome_msg1:

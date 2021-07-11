@@ -73,10 +73,8 @@ void func_vprintf(void (*write)(char), char* format, va_list va) {
                         format--;
                         break;
                     }
-                    goto printf_hex;
 
-                case 'x':
-printf_hex: {
+                case 'x': {
                     unsigned long long x;
                     switch (size) {
                         case SIZE_INT:

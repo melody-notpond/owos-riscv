@@ -5,8 +5,10 @@
 #include "drivers/virtio/block.h"
 #include "drivers/virtio/virtio.h"
 #include "kshell.h"
+#include "interrupts.h"
 #include "lib/memory.h"
 #include "lib/string.h"
+#include "opensbi.h"
 #include "userspace/elffile.h"
 #include "userspace/process.h"
 #include "userspace/mmu.h"
@@ -16,8 +18,8 @@
 generic_dir_t* root;
 char running = 1;
 
-void kinit() {
-    console_puts("Initialising kernel\n");
+void kinit(unsigned long long hartid, void* fdt) {
+    console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, fdt);
 
     // Initialise heap
     console_printf("Heap has 0x%llx bytes.\n", memsize());
@@ -43,6 +45,23 @@ void kinit() {
 
     // Register file systems
     register_fs_mounter(ext2_mount);
+
+    // Enable all interrupts in the PLIC
+    // TODO: don't hardcode the context
+    volatile unsigned int* enables = get_context_enable_bits(PLIC_CONTEXT(0, 1));
+    for (unsigned int i = 0; i < (PLIC_COUNT + 1) / 32; i++) {
+        enables[i] = 0xffffffff;
+    }
+
+    // Set priority threshold
+    volatile unsigned int* threshold = get_context_priority_threshold(PLIC_CONTEXT(0, 1));
+    *threshold = 0;
+
+    // Enable interrupts in the hart
+    unsigned long long t = 0x202;
+    asm volatile("csrs sie, %0" : "=r" (t));
+    t = 0x22;
+    asm volatile("csrs sstatus, %0" : "=r" (t));
 }
 
 void kmain() {

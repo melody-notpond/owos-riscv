@@ -149,9 +149,9 @@ void mmu_map_kernel(mmu_level_1_t* top) {
     mmu_map_range_identity(top, (void*) VIRTIO_MMIO_BASE, (void*) (VIRTIO_MMIO_TOP + VIRTIO_MMIO_INTERVAL), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     // Map interrupt stuff
-    mmu_map_range_identity(top, (void*) PLIC_BASE, (void*) (PLIC_BASE + PLIC_COUNT),    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, (void*) PLIC_CLAIM, (void*) (PLIC_CLAIM + 1),           MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, (void*) 0x0c002000, (void*) (0x0c002000 + 1),           MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) PLIC_BASE, (void*) (PLIC_BASE + PLIC_COUNT * 4),                                    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) (PLIC_BASE + PLIC_ENABLES_OFFSET), (void*) (PLIC_BASE + PLIC_ENABLES_OFFSET + 1),   MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, (void*) get_context_priority_threshold(1), (void*) (get_context_priority_threshold(1) + 1), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     // Map mmu
     map_mmu(top, top, top, MMU_FLAG_READ | MMU_FLAG_WRITE);
