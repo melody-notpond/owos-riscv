@@ -1,9 +1,12 @@
 #ifndef KERNEL_SYSCALL_H
 #define KERNEL_SYSCALL_H
 
-// user_syscall(unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long) -> unsigned long long
+#include "process.h"
+
+// user_syscall(unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long) -> unsigned long long
 // Does a syscall for a user mode process.
 unsigned long long user_syscall(
+    pid_t pid,
     unsigned long long syscall,
     unsigned long long a0,
     unsigned long long a1,

@@ -3,6 +3,7 @@
 
 #include "elffile.h"
 #include "mmu.h"
+#include "../drivers/filesystems/generic_file.h"
 
 #define PROCESS_REGISTER_ZERO   0
 #define PROCESS_REGISTER_RA     1
@@ -51,6 +52,7 @@ typedef struct s_process {
     pid_t parent_pid;
     process_state_t state;
     mmu_level_1_t* mmu_data;
+    generic_file_t** file_descriptors;
     unsigned long long pc;
     unsigned long long xs[32];
     double fs[32];

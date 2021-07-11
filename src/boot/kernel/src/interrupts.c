@@ -45,9 +45,9 @@ struct s_trap {
     unsigned long long xs[32];
 };
 
-// handle_interrupt(unsigned long long, unsigned long long, struct s_trap) -> unsigned long long
+// handle_interrupt(unsigned long long, unsigned long long, struct s_trap, pid_t) -> unsigned long long
 // Called by the interrupt handler to dispatch the interrupt. Returns the new value of sepc.
-unsigned long long handle_interrupt(unsigned long long scause, unsigned long long sepc, struct s_trap* trap_struct) {
+unsigned long long handle_interrupt(unsigned long long scause, unsigned long long sepc, struct s_trap* trap_struct, pid_t pid) {
     // Debug stuff
 #ifdef INTERRUPT_DEBUG
     console_puts("Interrupt received: 0x");
@@ -72,6 +72,7 @@ unsigned long long handle_interrupt(unsigned long long scause, unsigned long lon
             // User mode syscall
             case 0x08:
                 trap_struct->xs[PROCESS_REGISTER_A0] = user_syscall(
+                    pid,
                     trap_struct->xs[PROCESS_REGISTER_A7],
                     trap_struct->xs[PROCESS_REGISTER_A0],
                     trap_struct->xs[PROCESS_REGISTER_A1],

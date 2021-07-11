@@ -9,7 +9,7 @@ unsigned long long syscall_wrapper(
 );
 
 int main(int argc, char** argv) {
-    syscall_wrapper(69, 0, 1, 2, 3, 4, 5);
+    syscall_wrapper(1, 1, (unsigned long long) "uwu\n", 4, 0, 0, 0);
     while (1);
 }
 

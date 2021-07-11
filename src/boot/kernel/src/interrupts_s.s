@@ -43,6 +43,7 @@ interrupt_handler:
     csrr a0, scause
     csrr a1, sepc
     mv a2, sp
+    csrr a3, sscratch
     jal handle_interrupt
     csrw sepc, a0
 

@@ -63,7 +63,9 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
         return pid;
 
     process_t* process = fetch_process(pid);
+    process->file_descriptors = alloc_page(2);
     process->mmu_data = create_mmu_top();
+    map_mmu(process->mmu_data, process->file_descriptors, process->file_descriptors, MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     void* last_pointer = 0;
     for (int i = 0; i < elf->header.program_header_num; i++) {
@@ -95,8 +97,15 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
 // jump_to_process(pid_t) -> void
 // Jumps to a given process.
 void jump_to_process(pid_t pid) {
+    // Get process info
     process_t* process = fetch_process(pid);
     process->state = PROCESS_STATE_RUNNING;
+
+    // Set up page table
+    unsigned long long mmu = (((unsigned long long) process->mmu_data) >> 12) | 0x8000000000000000;
+    asm volatile("csrw satp, %0" : "=r" (mmu));
+    mmu = 0;
+    asm volatile("sfence.vma zero, %0" : "=r" (mmu));
 
     // process_switch_context(process_t*) -> void
     // Switches the current context to a process and continues execution of that process.
