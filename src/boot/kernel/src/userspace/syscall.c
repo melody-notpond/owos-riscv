@@ -1,9 +1,9 @@
 #include "syscall.h"
 #include "../drivers/console/console.h"
 
-// user_syscall(unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long) -> void
+// user_syscall(unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long) -> unsigned long long
 // Does a syscall for a user mode process.
-void user_syscall(
+unsigned long long user_syscall(
     unsigned long long syscall,
     unsigned long long a0,
     unsigned long long a1,
@@ -19,14 +19,6 @@ void user_syscall(
     console_printf("a3: %llx\n", a3);
     console_printf("a4: %llx\n", a4);
     console_printf("a5: %llx\n", a5);
-
-    switch (syscall) {
-        case 0x00:
-            console_puts("Called syscall 0! (Not factorial)\n");
-            break;
-        default:
-            console_printf("Called unknown syscall %llx.\n", syscall);
-            break;
-    }
+    return 0;
 }
 

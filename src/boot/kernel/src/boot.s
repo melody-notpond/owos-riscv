@@ -27,7 +27,6 @@ _start:
     la a0, welcome_msg5
     jal console_puts
 
-
     # Set supervisor trap vector
     la t0, interrupt_handler
     csrw stvec, t0
