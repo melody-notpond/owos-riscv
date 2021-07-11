@@ -1,4 +1,4 @@
-void syscall_wrapper(
+unsigned long long syscall_wrapper(
     unsigned long long syscall,
     unsigned long long a0,
     unsigned long long a1,

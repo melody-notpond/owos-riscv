@@ -71,7 +71,7 @@ unsigned long long handle_interrupt(unsigned long long scause, unsigned long lon
         switch (scause) {
             // User mode syscall
             case 0x08:
-                user_syscall(
+                trap_struct->xs[PROCESS_REGISTER_A0] = user_syscall(
                     trap_struct->xs[PROCESS_REGISTER_A7],
                     trap_struct->xs[PROCESS_REGISTER_A0],
                     trap_struct->xs[PROCESS_REGISTER_A1],
