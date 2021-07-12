@@ -164,7 +164,7 @@ void* malloc(unsigned long int n) {
 
     // Calculate size with padding
     unsigned long long size = n + sizeof(struct s_malloc_pointer_header);
-    size = (size + 7) & ~7;
+    size = (size + 15) & ~15;
 
     // Iterate until the end of the heap is reached
     struct s_malloc_pointer_header* ptr = &heap_bottom;

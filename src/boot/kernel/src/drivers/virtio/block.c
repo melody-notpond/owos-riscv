@@ -50,9 +50,9 @@ void virtio_block_mei_handler(unsigned int mei_id) {
 
     if (status == VIRTIO_INTERRUPT_USED_RING_UPDATE) {
         // Free memory that is no longer used
-        void* p;
-        while ((p = (void*) virtqueue_pop_used(device->queue))) {
-            free(p);
+        volatile virtio_descriptor_t* p;
+        while ((p = virtqueue_pop_used(device->queue))) {
+            free((void*) p->addr);
         }
     }
 }

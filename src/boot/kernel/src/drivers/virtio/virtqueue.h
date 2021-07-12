@@ -23,6 +23,7 @@ typedef struct __attribute__((__packed__, aligned(1))) {
     unsigned short idx;
     unsigned short ring[VIRTIO_RING_SIZE];
     unsigned short event;
+    char padding[2];
 } virtio_available_t;
 
 typedef struct __attribute__((__packed__, aligned(1))) {
@@ -41,6 +42,7 @@ typedef struct __attribute__((__packed__, aligned(1))) {
     volatile virtio_descriptor_t* desc;
     volatile virtio_available_t* available;
     volatile virtio_used_t* used;
+    char padding[8];
 } virtio_queue_t;
 
 // virtqueue_add_to_device(volatile virtio_mmio_t* mmio, unsigned int) -> volatile virtio_queue_t*

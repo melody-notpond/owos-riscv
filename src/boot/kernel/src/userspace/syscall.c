@@ -62,10 +62,7 @@ unsigned long long user_syscall(
             char** argv = (void*) a1;
             char** envp = (void*) a2;
 
-            unsigned long long t = 0x22;
-            asm volatile("csrs sstatus, %0" : "=r" (t));
             elf_t elf = load_executable_elf_from_file(root, path);
-            asm volatile("csrc sstatus, %0" : "=r" (t));
             pid_t pid = load_elf_as_process(0, &elf, 1);
             free_elf(&elf);
             jump_to_process(pid);

@@ -87,9 +87,9 @@ void kmain() {
         generic_file_t* file = fstab.value.file;
         int c;
         while ((c = generic_file_read_char(file)) != EOF) {
-            console_putc(c);
+            sbi_console_putchar(c);
         }
-        console_putc('\n');
+        sbi_console_putchar('\n');
         close_generic_file(file);
     } else {
         if (fstab.tag == DIR_ENTRY_TYPE_DIR)
