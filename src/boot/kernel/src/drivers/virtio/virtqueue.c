@@ -76,14 +76,11 @@ void virtqueue_push_available(volatile virtio_queue_t* queue, unsigned short des
 // virtqueue_pop_used(volatile virtio_queue_t*) -> volatile virtio_descriptor_t*
 // Pops a used descriptor from a queue.
 volatile virtio_descriptor_t* virtqueue_pop_used(volatile virtio_queue_t* queue) {
-    if (queue->last_seen_used == queue->used->idx % VIRTIO_RING_SIZE)
+    if (queue->last_seen_used == queue->used->idx)
         return (void*) 0;
 
-    unsigned short id = queue->used->ring[queue->last_seen_used++].id;
+    unsigned short id = queue->used->ring[queue->last_seen_used++ % VIRTIO_RING_SIZE].id;
     volatile virtio_descriptor_t* used = &queue->desc[id];
-
-    while (queue->last_seen_used >= VIRTIO_RING_SIZE)
-        queue->last_seen_used -= VIRTIO_RING_SIZE;
 
     return used;
 }

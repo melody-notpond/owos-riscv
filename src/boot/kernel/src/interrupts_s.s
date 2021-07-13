@@ -4,11 +4,13 @@
 
 interrupt_handler:
     # Push registers
-    #csrrw sp, sscratch, sp
+    csrw sscratch, sp
+    la sp, isr_stack_end
     addi sp, sp, -0x200
     sd x0,  0x000(sp)
     sd x1,  0x008(sp)
-    sd x2,  0x010(sp)
+    csrr x1, sscratch
+    sd x1,  0x010(sp)
     sd x3,  0x018(sp)
     sd x4,  0x020(sp)
     sd x5,  0x028(sp)
@@ -43,7 +45,7 @@ interrupt_handler:
     csrr a0, scause
     csrr a1, sepc
     mv a2, sp
-    csrr a3, sscratch
+    mv a3, zero # TODO: figure out how to get the pid
     jal handle_interrupt
     csrw sepc, a0
 
@@ -78,17 +80,15 @@ interrupt_handler:
     ld x29, 0xe8(sp)
     ld x30, 0xf0(sp)
     ld x31, 0xf8(sp)
-    addi sp, sp, 0x200
-    #csrrw sp, sscratch, sp
+    ld sp, 0x10(sp)
     sret
 
 
 # Stack stuff
-/*
 .section .bss
 .align 4
 isr_stack_start:
     .skip 8192
 isr_stack_end:
 .global isr_stack_end
-*/
+
