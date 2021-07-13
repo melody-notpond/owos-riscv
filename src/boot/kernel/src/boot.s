@@ -9,8 +9,8 @@ _start:
     la sp, stack_top
     mv fp, sp
 
-    mv t5, a0
-    mv t6, a1
+    # Save hart id
+    mv t6, a0
 
     # Print out welcome message
     la a0, welcome_msg0
@@ -50,8 +50,7 @@ _start:
     la ra, kmain
     li a0, 0x40122
     csrs sstatus, a0
-    mv a0, t5
-    mv a1, t6
+    mv a0, t6
     sret
 
 finish:

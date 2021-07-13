@@ -1,6 +1,8 @@
 #ifndef KERNEL_INTERRUPTS_H
 #define KERNEL_INTERRUPTS_H
 
+#include "userspace/process.h"
+
 // TODO: Detect base address using device trees
 #define PLIC_BASE               0x0c000000
 #define PLIC_PRIORITY_OFFSET    0x00000004
@@ -12,6 +14,14 @@
 
 // Converts a hartid and supervisor/user mode pair into a context for the PLIC.
 #define PLIC_CONTEXT(hartid, s) ((hartid) * 2 + (s))
+
+typedef struct {
+    unsigned long long hartid;
+    pid_t pid;
+    unsigned long long pc;
+    unsigned long long xs[32];
+    double fs[32];
+} trap_t;
 
 // get_context_enable_bits(unsigned long long) -> volatile unsigned int*
 // Gets a volatile pointer to the interrupt enable bits for a given context.

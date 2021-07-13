@@ -2,85 +2,105 @@
 .global interrupt_handler
 .align 2
 
+/*
+typedef struct {
+    unsigned long long hartid;
+    pid_t pid;
+    unsigned long long pc;
+    unsigned long long xs[32];
+    double fs[32];
+} trap_t;
+*/
 interrupt_handler:
-    # Push registers
-    csrw sscratch, sp
+    # Save registers
+    csrrw t6, sscratch, t6
+    sd x0,  0x018(t6)
+    sd x1,  0x020(t6)
+    sd x2,  0x028(t6)
+    sd x3,  0x030(t6)
+    sd x4,  0x038(t6)
+    sd x5,  0x040(t6)
+    sd x6,  0x048(t6)
+    sd x7,  0x050(t6)
+    sd x8,  0x058(t6)
+    sd x9,  0x060(t6)
+    sd x10, 0x068(t6)
+    sd x11, 0x070(t6)
+    sd x12, 0x078(t6)
+    sd x13, 0x080(t6)
+    sd x14, 0x088(t6)
+    sd x15, 0x090(t6)
+    sd x16, 0x098(t6)
+    sd x17, 0x0a0(t6)
+    sd x18, 0x0a8(t6)
+    sd x19, 0x0b0(t6)
+    sd x20, 0x0b8(t6)
+    sd x21, 0x0c0(t6)
+    sd x22, 0x0c8(t6)
+    sd x23, 0x0d0(t6)
+    sd x24, 0x0d8(t6)
+    sd x25, 0x0e0(t6)
+    sd x26, 0x0e8(t6)
+    sd x27, 0x0f0(t6)
+    sd x28, 0x0f8(t6)
+    sd x29, 0x100(t6)
+    sd x30, 0x108(t6)
+
+    # Save t6
+    csrr t5, sscratch
+    sd t5, 0x110(t6)
+    csrw sscratch, t6
+
+    # Save pc
+    csrr t5, sepc
+    sd t5, 0x010(t6)
+
+    # Init stack
     la sp, isr_stack_end
-    addi sp, sp, -0x200
-    sd x0,  0x000(sp)
-    sd x1,  0x008(sp)
-    csrr x1, sscratch
-    sd x1,  0x010(sp)
-    sd x3,  0x018(sp)
-    sd x4,  0x020(sp)
-    sd x5,  0x028(sp)
-    sd x6,  0x030(sp)
-    sd x7,  0x038(sp)
-    sd x8,  0x040(sp)
-    sd x9,  0x048(sp)
-    sd x10, 0x050(sp)
-    sd x11, 0x058(sp)
-    sd x12, 0x060(sp)
-    sd x13, 0x068(sp)
-    sd x14, 0x070(sp)
-    sd x15, 0x078(sp)
-    sd x16, 0x080(sp)
-    sd x17, 0x088(sp)
-    sd x18, 0x090(sp)
-    sd x19, 0x098(sp)
-    sd x20, 0x0a0(sp)
-    sd x21, 0x0a8(sp)
-    sd x22, 0x0b0(sp)
-    sd x23, 0x0b8(sp)
-    sd x24, 0x0c0(sp)
-    sd x25, 0x0c8(sp)
-    sd x26, 0x0d0(sp)
-    sd x27, 0x0d8(sp)
-    sd x28, 0x0e0(sp)
-    sd x29, 0x0e8(sp)
-    sd x30, 0x0f0(sp)
-    sd x31, 0x0f8(sp)
 
     # Call interrupt handler
     csrr a0, scause
-    csrr a1, sepc
-    mv a2, sp
-    mv a3, zero # TODO: figure out how to get the pid
+    mv a1, t6
     jal handle_interrupt
-    csrw sepc, a0
+    mv t6, a0
 
-    # Pop registers
-    ld x1, 0x08(sp)
-    ld x3, 0x18(sp)
-    ld x4, 0x20(sp)
-    ld x5, 0x28(sp)
-    ld x6, 0x30(sp)
-    ld x7, 0x38(sp)
-    ld x8, 0x40(sp)
-    ld x9, 0x48(sp)
-    ld x10, 0x50(sp)
-    ld x11, 0x58(sp)
-    ld x12, 0x60(sp)
-    ld x13, 0x68(sp)
-    ld x14, 0x70(sp)
-    ld x15, 0x78(sp)
-    ld x16, 0x80(sp)
-    ld x17, 0x88(sp)
-    ld x18, 0x90(sp)
-    ld x19, 0x98(sp)
-    ld x20, 0xa0(sp)
-    ld x21, 0xa8(sp)
-    ld x22, 0xb0(sp)
-    ld x23, 0xb8(sp)
-    ld x24, 0xc0(sp)
-    ld x25, 0xc8(sp)
-    ld x26, 0xd0(sp)
-    ld x27, 0xd8(sp)
-    ld x28, 0xe0(sp)
-    ld x29, 0xe8(sp)
-    ld x30, 0xf0(sp)
-    ld x31, 0xf8(sp)
-    ld sp, 0x10(sp)
+    # Revert pc
+    ld t5, 0x010(t6)
+    csrw sepc, t5
+
+    # Revert registers
+    ld x0,  0x018(t6)
+    ld x1,  0x020(t6)
+    ld x2,  0x028(t6)
+    ld x3,  0x030(t6)
+    ld x4,  0x038(t6)
+    ld x5,  0x040(t6)
+    ld x6,  0x048(t6)
+    ld x7,  0x050(t6)
+    ld x8,  0x058(t6)
+    ld x9,  0x060(t6)
+    ld x10, 0x068(t6)
+    ld x11, 0x070(t6)
+    ld x12, 0x078(t6)
+    ld x13, 0x080(t6)
+    ld x14, 0x088(t6)
+    ld x15, 0x090(t6)
+    ld x16, 0x098(t6)
+    ld x17, 0x0a0(t6)
+    ld x18, 0x0a8(t6)
+    ld x19, 0x0b0(t6)
+    ld x20, 0x0b8(t6)
+    ld x21, 0x0c0(t6)
+    ld x22, 0x0c8(t6)
+    ld x23, 0x0d0(t6)
+    ld x24, 0x0d8(t6)
+    ld x25, 0x0e0(t6)
+    ld x26, 0x0e8(t6)
+    ld x27, 0x0f0(t6)
+    ld x28, 0x0f8(t6)
+    ld x29, 0x100(t6)
+    ld x30, 0x108(t6)
+    ld x31, 0x110(t6)
     sret
 
 

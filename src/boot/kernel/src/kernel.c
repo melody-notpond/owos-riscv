@@ -16,10 +16,23 @@
 #define ROOT_DISC "/dev/virt-blk7"
 
 generic_dir_t* root;
+trap_t trap_structs[32];
+
 char running = 1;
 
 void kinit(unsigned long long hartid, void* fdt) {
     console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, fdt);
+
+    // Create trap structure
+    trap_structs[hartid] = (trap_t) {
+        .hartid = hartid,
+        .pid = 0,
+        .pc = 0,
+        .xs = { 0 },
+        .fs = { 0.0 }
+    };
+    trap_t* trap = &trap_structs[hartid];
+    asm volatile("csrw sscratch, %0" : "=r" (trap));
 
     // Initialise heap
     console_printf("Heap has 0x%llx bytes.\n", memsize());

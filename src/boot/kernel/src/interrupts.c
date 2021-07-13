@@ -1,5 +1,4 @@
 #include "interrupts.h"
-#include "userspace/process.h"
 #include "userspace/syscall.h"
 #include "drivers/console/console.h"
 
@@ -57,13 +56,9 @@ void handle_mei() {
         mei_handler(mei_id);
 }
 
-struct s_trap {
-    unsigned long long xs[32];
-};
-
-// handle_interrupt(unsigned long long, unsigned long long, struct s_trap, pid_t) -> unsigned long long
-// Called by the interrupt handler to dispatch the interrupt. Returns the new value of sepc.
-unsigned long long handle_interrupt(unsigned long long scause, unsigned long long sepc, struct s_trap* trap_struct, pid_t pid) {
+// handle_interrupt(unsigned long long, unsigned long long, struct s_trap, pid_t) -> trap_t*
+// Called by the interrupt handler to dispatch the interrupt. Returns the trap structure from which to 
+trap_t* handle_interrupt(unsigned long long scause, trap_t* trap) {
     // Debug stuff
 #ifdef INTERRUPT_DEBUG
     console_printf("Interrupt received: 0x%llx\n", scause);
@@ -86,17 +81,17 @@ unsigned long long handle_interrupt(unsigned long long scause, unsigned long lon
         switch (scause) {
             // User mode syscall
             case 0x08:
-                trap_struct->xs[PROCESS_REGISTER_A0] = user_syscall(
-                    pid,
-                    trap_struct->xs[PROCESS_REGISTER_A7],
-                    trap_struct->xs[PROCESS_REGISTER_A0],
-                    trap_struct->xs[PROCESS_REGISTER_A1],
-                    trap_struct->xs[PROCESS_REGISTER_A2],
-                    trap_struct->xs[PROCESS_REGISTER_A3],
-                    trap_struct->xs[PROCESS_REGISTER_A4],
-                    trap_struct->xs[PROCESS_REGISTER_A5]
+                trap->xs[PROCESS_REGISTER_A0] = user_syscall(
+                    trap->pid,
+                    trap->xs[PROCESS_REGISTER_A7],
+                    trap->xs[PROCESS_REGISTER_A0],
+                    trap->xs[PROCESS_REGISTER_A1],
+                    trap->xs[PROCESS_REGISTER_A2],
+                    trap->xs[PROCESS_REGISTER_A3],
+                    trap->xs[PROCESS_REGISTER_A4],
+                    trap->xs[PROCESS_REGISTER_A5]
                 );
-                sepc += 4;
+                trap->pc += 4;
                 break;
 
             default:
@@ -105,6 +100,6 @@ unsigned long long handle_interrupt(unsigned long long scause, unsigned long lon
         }
     }
 
-    return sepc;
+    return trap;
 }
 

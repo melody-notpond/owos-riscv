@@ -61,10 +61,6 @@ process_switch_context:
     li a1, 0x100
     csrc sstatus, a1
 
-    # Set sscratch to pid
-    ld a1, 0x000(a0)
-    csrw sscratch, a1
-
     # a0, a1, and a2 are done last
     ld a1,  0x088(a0)
     ld a2,  0x090(a0)
