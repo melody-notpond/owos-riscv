@@ -2,8 +2,12 @@
 #include "process.h"
 
 pid_t MAX_PID = 10000;
-pid_t current_pid = 0;
+pid_t current_pid = 1;
 process_t* process_table;
+
+unsigned long long JOB_QUEUE_SIZE = 4096;
+unsigned long long job_queue_pos = 0;
+pid_t* job_queue;
 
 // init_process_table() -> void
 // Initialises the process table.
@@ -11,10 +15,14 @@ void init_process_table() {
     unsigned long long page_num = (MAX_PID * sizeof(process_t) + PAGE_SIZE - 1) / PAGE_SIZE;
     process_table = alloc_page(page_num);
     MAX_PID = page_num * PAGE_SIZE / sizeof(process_t);
+
+    page_num = (JOB_QUEUE_SIZE * sizeof(pid_t) + PAGE_SIZE - 1) / PAGE_SIZE;
+    job_queue = alloc_page(page_num);
+    JOB_QUEUE_SIZE = page_num * PAGE_SIZE / sizeof(pid_t);
 }
 
 // spawn_process(pid_t) -> pid_t
-// Spawns a process given its parent process. Returns -1 if unsuccessful.
+// Spawns a process given its parent process. Returns 0 if unsuccessful.
 pid_t spawn_process(pid_t parent_pid) {
     if (current_pid < MAX_PID) {
         process_table[current_pid] = (process_t) {
@@ -31,9 +39,9 @@ pid_t spawn_process(pid_t parent_pid) {
         return pid;
     }
 
-    for (pid_t i = 0; i < MAX_PID; i++) {
+    for (pid_t i = 1; i < MAX_PID; i++) {
         if (process_table[i].state == PROCESS_STATE_DEAD) {
-            process_table[current_pid] = (process_t) {
+            process_table[i] = (process_t) {
                 .pid = i,
                 .parent_pid = parent_pid,
                 .state = PROCESS_STATE_WAIT,
@@ -46,7 +54,7 @@ pid_t spawn_process(pid_t parent_pid) {
         }
     }
 
-    return -1;
+    return 0;
 }
 
 // fetch_process(pid_t) -> process_t*
@@ -59,7 +67,7 @@ process_t* fetch_process(pid_t pid) {
 // Uses an elf file as a process.
 pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_count) {
     pid_t pid = spawn_process(parent_pid);
-    if (pid == (unsigned long long) -1)
+    if (pid == 0)
         return pid;
 
     process_t* process = fetch_process(pid);
@@ -92,6 +100,49 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
     process->xs[PROCESS_REGISTER_FP] = (unsigned long long) last_pointer;
 
     return pid;
+}
+
+// process_init_kernel_mmu(pid_t) -> void
+// Initialises a process's mmu by setting up the kernel part of hte mmu.
+void process_init_kernel_mmu(pid_t pid) {
+    process_t* process = fetch_process(pid);
+    unsigned long long mmu;
+    mmu_level_1_t* top = (void*) 0;
+    asm volatile("csrr %0, satp" : "=r" (mmu));
+    top = (void*) ((mmu & 0x00000fffffffffff) << 12);
+    copy_mmu_globals(process->mmu_data, top);
+}
+
+// add_process_to_queue(pid_t) -> int
+// Adds a process to the jobs queue. Returns true if added to the queue.
+int add_process_to_queue(pid_t pid) {
+    process_t* process = fetch_process(pid);
+    for (unsigned long long i = 0; i < JOB_QUEUE_SIZE; i++) {
+        if (job_queue[i] == 0) {
+            job_queue[i] = pid;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+// next_process_in_queue() -> pid_t
+// Returns the next process in the queue, or 0 if no such process exists.
+pid_t next_process_in_queue() {
+    unsigned long long last_in_queue = job_queue_pos++;
+        if (last_in_queue >= JOB_QUEUE_SIZE)
+            last_in_queue %= JOB_QUEUE_SIZE;
+
+    while (last_in_queue != job_queue_pos) {
+        if (job_queue[job_queue_pos] != 0)
+            return job_queue[job_queue_pos];
+        job_queue_pos++;
+        if (job_queue_pos >= JOB_QUEUE_SIZE)
+            job_queue_pos %= JOB_QUEUE_SIZE;
+    }
+
+    return job_queue[last_in_queue];
 }
 
 // jump_to_process(pid_t) -> void

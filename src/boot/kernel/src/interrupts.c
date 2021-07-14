@@ -1,4 +1,5 @@
 #include "interrupts.h"
+#include "opensbi.h"
 #include "userspace/syscall.h"
 #include "drivers/console/console.h"
 
@@ -56,8 +57,40 @@ void handle_mei() {
         mei_handler(mei_id);
 }
 
+// swap_process(trap_t*) -> void
+// Swaps the current process with the next process in the queue.
+void swap_process(trap_t* trap) {
+    // Save current state
+    process_t* process = fetch_process(trap->pid);
+    process->pc = trap->pc;
+    memcpy(process->xs, trap->xs, sizeof(unsigned long long) * 32);
+    memcpy(process->fs, trap->fs, sizeof(double) * 32);
+
+    pid_t pid = next_process_in_queue();
+    if (pid) {
+        // Get process
+        process_t* new = fetch_process(pid);
+        trap->pid = pid;
+
+        // Set mmu
+        unsigned long long mmu = (((unsigned long long) new->mmu_data) >> 12) | 0x8000000000000000;
+        asm volatile("csrw satp, %0" : "=r" (mmu));
+        mmu = 0;
+        asm volatile("sfence.vma zero, %0" : "=r" (mmu));
+
+        // Set trap registers
+        trap->pc = new->pc;
+        memcpy(trap->xs, new->xs, sizeof(unsigned long long) * 32);
+        memcpy(trap->fs, new->fs, sizeof(double) * 32);
+
+        // Set ring to user ring
+        mmu = 0x100;
+        asm volatile("csrc sstatus, %0" : "=r" (mmu));
+    }
+}
+
 // handle_interrupt(unsigned long long, unsigned long long, struct s_trap, pid_t) -> trap_t*
-// Called by the interrupt handler to dispatch the interrupt. Returns the trap structure from which to 
+// Called by the interrupt handler to dispatch the interrupt. Returns the trap structure to jump back to.
 trap_t* handle_interrupt(unsigned long long scause, trap_t* trap) {
     // Debug stuff
 #ifdef INTERRUPT_DEBUG
@@ -68,9 +101,21 @@ trap_t* handle_interrupt(unsigned long long scause, trap_t* trap) {
     if (scause &  0x8000000000000000) {
         scause &= 0x7fffffffffffffff;
         switch (scause) {
+            // Timer interrupts
+            case 0x05: {
+                swap_process(trap);
+
+                unsigned long long time = 0;
+                asm volatile("csrr %0, time" : "=r" (time));
+                sbi_set_timer(time + 10000);
+                break;
+            }
+
+            // External interrupts
             case 0x09:
                 handle_mei();
                 break;
+
             default:
                 console_printf("unknown asynchronous interrupt: 0x%llx\n", scause);
                 while (1);

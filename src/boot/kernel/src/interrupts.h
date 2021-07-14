@@ -39,5 +39,9 @@ volatile unsigned int* get_context_claim_pointer(unsigned long long context);
 // Registers a machine external interrupt with a given mei id, priority, and handler. If the priority is 0, then the interrupt is disabled. Returns 0 on successful registration, 1 on failure.
 char register_mei_handler(unsigned int mei_id, unsigned char priority, void (*mei_handler)(unsigned int));
 
+// swap_process(trap_t*) -> void
+// Swaps the current process with the next process in the queue.
+void swap_process(trap_t* trap);
+
 #endif /* KERNEL_INTERRUPTS_H */
 

@@ -3,6 +3,8 @@
 .global sbi_console_putchar
 .global sbi_console_getchar
 
+.global sbi_set_timer
+
 .global sbi_hart_start
 .global sbi_hart_stop
 .global sbi_hart_get_status
@@ -23,6 +25,14 @@ sbi_console_putchar:
 sbi_console_getchar:
     li a6, 0
     li a7, 2
+    ecall
+    ret
+
+# sbi_set_timer(unsigned long long) -> struct sbiret
+# Sets the timer value.
+sbi_set_timer:
+    li a6, 0
+    li a7, 0x54494D45
     ecall
     ret
 

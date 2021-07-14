@@ -74,6 +74,18 @@ process_t* fetch_process(pid_t pid);
 // Uses an elf file as a process.
 pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_count);
 
+// process_init_kernel_mmu(pid_t) -> void
+// Initialises a process's mmu by setting up the kernel part of hte mmu.
+void process_init_kernel_mmu(pid_t pid);
+
+// add_process_to_queue(pid_t) -> int
+// Adds a process to the jobs queue. Returns true if added to the queue.
+int add_process_to_queue(pid_t pid);
+
+// next_process_in_queue() -> pid_t
+// Returns the next process in the queue, or 0 if no such process exists.
+pid_t next_process_in_queue();
+
 // jump_to_process(pid_t) -> void
 // Jumps to a given process.
 void jump_to_process(pid_t pid);

@@ -26,7 +26,7 @@ SECTIONS
 
     . = ALIGN(4096);
     PROVIDE(stack_start = .);
-    . += 0x8000;
+    . += 0x4000;
     PROVIDE(stack_top = .);
 
     /* Heap */

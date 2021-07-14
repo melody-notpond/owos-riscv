@@ -18,8 +18,6 @@
 generic_dir_t* root;
 trap_t trap_structs[32];
 
-char running = 1;
-
 void kinit(unsigned long long hartid, void* fdt) {
     console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, fdt);
 
@@ -69,6 +67,10 @@ void kinit(unsigned long long hartid, void* fdt) {
     // Set priority threshold
     volatile unsigned int* threshold = get_context_priority_threshold(PLIC_CONTEXT(0, 1));
     *threshold = 0;
+
+    // Set next time interrupt
+    unsigned long long time = 0;
+    asm volatile("csrr %0, time" : "=r" (time));
 
     // Enable interrupts in the hart
     unsigned long long t = 0x202;
@@ -120,18 +122,23 @@ void kmain() {
 
     // Load /sbin/init
     elf_t init = load_executable_elf_from_file(root, "/sbin/init");
-    pid_t initd = load_elf_as_process(0, &init, 1);
+    pid_t initd = load_elf_as_process(1, &init, 1);
     free_elf(&init);
 
     // Load the new page table and clean up the old page table
+    process_init_kernel_mmu(initd);
     mmu_level_1_t* new_top = fetch_process(initd)->mmu_data;
-    copy_mmu_globals(new_top, top);
     mmu = 0x8000000000000000 | (((unsigned long long) new_top) >> 12);
     asm volatile("csrw satp, %0" : "=r" (mmu));
     clean_mmu_mappings(top, 0);
+    asm volatile("sfence.vma");
 
-    // Jump to init process
+    // Queue init process
+    add_process_to_queue(initd);
     console_puts("Loaded initd.\n");
-    jump_to_process(initd);
+    sbi_set_timer(0);
+    unsigned long long t = 0x222;
+    asm volatile("csrs sie, %0" : "=r" (t));
+    while (1);
 }
 

@@ -64,14 +64,9 @@ unsigned long long user_syscall(
 
             elf_t elf = load_executable_elf_from_file(root, path);
             pid_t p = load_elf_as_process(pid, &elf, 1);
-            unsigned long long mmu;
-            mmu_level_1_t* top = (void*) 0;
-            asm volatile("csrr %0, satp" : "=r" (mmu));
-            top = (void*) ((mmu & 0x00000fffffffffff) << 12);
-            copy_mmu_globals(fetch_process(p)->mmu_data, top);
-            console_printf("spawned process %llx\n", p);
             free_elf(&elf);
-            jump_to_process(p);
+            process_init_kernel_mmu(p);
+            add_process_to_queue(p);
             return 0;
         }
 
