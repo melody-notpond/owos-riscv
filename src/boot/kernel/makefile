@@ -16,7 +16,7 @@ main: $(CODE)*.c $(CODE)*.s
 lib: $(CODE)lib/*.c
 	$(CC) $(CFLAGS) -c $?
 
-userspace: $(CODE)userspace/*.c $(CODE)userspace/*.s
+userspace: $(CODE)userspace/*.c
 	$(CC) $(CFLAGS) -c $?
 
 drivers: drivers/filesystems drivers/console drivers/virtio

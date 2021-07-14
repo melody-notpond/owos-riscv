@@ -145,23 +145,3 @@ pid_t next_process_in_queue() {
     return job_queue[last_in_queue];
 }
 
-// jump_to_process(pid_t) -> void
-// Jumps to a given process.
-void jump_to_process(pid_t pid) {
-    // Get process info
-    process_t* process = fetch_process(pid);
-    process->state = PROCESS_STATE_RUNNING;
-
-    // Set up page table
-    unsigned long long mmu = (((unsigned long long) process->mmu_data) >> 12) | 0x8000000000000000;
-    asm volatile("csrw satp, %0" : "=r" (mmu));
-    mmu = 0;
-    asm volatile("sfence.vma zero, %0" : "=r" (mmu));
-
-    // process_switch_context(process_t*) -> void
-    // Switches the current context to a process and continues execution of that process.
-    void process_switch_context(process_t* process);
-
-    process_switch_context(process);
-}
-
