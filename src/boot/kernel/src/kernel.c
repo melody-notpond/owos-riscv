@@ -4,7 +4,6 @@
 #include "drivers/console/console.h"
 #include "drivers/virtio/block.h"
 #include "drivers/virtio/virtio.h"
-#include "kshell.h"
 #include "interrupts.h"
 #include "lib/memory.h"
 #include "lib/string.h"

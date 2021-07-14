@@ -17,9 +17,26 @@ unsigned long long user_syscall(
     trap_t* trap
 ) {
     switch (syscall) {
-        // unsigned long long write(unsigned int fd, char* buffer, unsigned long long count);
+        // unsigned long long read(int fd, void* buffer, unsigned long long count);
+        case 0: {
+            int fd = (int) a0;
+            void* buffer = (void*) a1;
+            unsigned long long count = a2;
+
+            if (fd > FILE_DESCRIPTOR_COUNT)
+                return -1;
+
+            process_t* process = fetch_process(pid);
+
+            if (process->file_descriptors[fd] == (void*) 0)
+                return -1;
+
+            return generic_file_read(process->file_descriptors[fd], buffer, count);
+        }
+
+        // unsigned long long write(int fd, char* buffer, unsigned long long count);
         case 1: {
-            unsigned int fd = a0;
+            int fd = a0;
             char* buffer = (void*) a1;
             unsigned long long count = a2;
             process_t* process = fetch_process(pid);
@@ -33,7 +50,7 @@ unsigned long long user_syscall(
                 return count;
             }
 
-            if (fd >= 1024)
+            if (fd >= FILE_DESCRIPTOR_COUNT)
                 return -1;
             generic_file_t* file = file_descriptors[fd];
             if (file == (void*) 0)
@@ -45,15 +62,85 @@ unsigned long long user_syscall(
             // return count;
         }
 
-        // pid_t getpid(void);
-        case 39: {
-            return pid;
+        // int open(char* path, int flags, int mode);
+        case 2: {
+            char* path = (void*) a0;
+
+            // TODO: use these
+            int flags = (int) a1;
+            int mode = (int) a2;
+
+            struct s_dir_entry dir = generic_dir_lookup(root, path);
+            process_t* process = fetch_process(pid);
+            switch (dir.tag) {
+                case DIR_ENTRY_TYPE_REGULAR:
+                    for (int i = 3; i < FILE_DESCRIPTOR_COUNT; i++) {
+                        if (process->file_descriptors[i] == (void*) 0) {
+                            process->file_descriptors[i] = dir.value.file;
+                            return i;
+                        }
+                    }
+                    return -1;
+
+                // TODO
+                case DIR_ENTRY_TYPE_DIR:
+                    return -1;
+
+                // TODO
+                case DIR_ENTRY_TYPE_BLOCK:
+                    return -1;
+
+                // Error
+                case DIR_ENTRY_TYPE_UNKNOWN:
+                    return -1;
+                case DIR_ENTRY_TYPE_UNUSED:
+                    return -1;
+            }
         }
 
-        // void exit(int status);
+        // int close(int fd)
+        case 3: {
+            int fd = (int) a0;
+
+            if (fd > FILE_DESCRIPTOR_COUNT)
+                return -1;
+
+            process_t* process = fetch_process(pid);
+            if (process->file_descriptors[fd] == (void*) 0)
+                return -1;
+            close_generic_file(process->file_descriptors[fd]);
+            process->file_descriptors[fd] = (void*) 0;
+            return 0;
+        }
+
+        // void* mmap(void* addr, unsigned long long length, int prot, int flags, int fd, unsigned long long offset);
+        case 9: {
+            void* addr = (void*) a0;
+            unsigned long long length = a1;
+            int prot = (int) a2;
+            int flags = (int) a3;
+            int fd = (int) a4;
+            unsigned long long offset = a5;
+            return -1;
+        }
+
+        // int mprotect(void* addr, unsigned long long length, int prot);
+        case 10:
+            return -1;
+
+        // int munmap(void* addr, unsigned long long length);
+        case 11:
+            return -1;
+
+        // pid_t getpid(void);
+        case 39:
+            return pid;
+
+        // void exit(void* returned, unsigned long long length);
         case 60: {
             // TODO: use this value
-            unsigned char status = a0;
+            void* returned = (void*) a0;
+            unsigned long long length = a1;
 
             kill_process(pid);
             sbi_set_timer(0);
@@ -61,9 +148,8 @@ unsigned long long user_syscall(
         }
 
         // pid_t getppid(void);
-        case 110: {
+        case 110:
             return fetch_process(pid)->parent_pid;
-        }
 
         // pid_t spawn(char* path, char* argv[], char* envp[]);
         case 314: {
@@ -78,7 +164,7 @@ unsigned long long user_syscall(
             free_elf(&elf);
             process_init_kernel_mmu(p);
             add_process_to_queue(p);
-            return 0;
+            return p;
         }
 
         // Unknown syscall

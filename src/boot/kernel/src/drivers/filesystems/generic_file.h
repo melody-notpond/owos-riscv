@@ -138,9 +138,9 @@ void generic_dir_append_entry(generic_dir_t* dir, struct s_dir_entry entry);
 // Returns an entry with the same name if found. Returns a zeroed out structure if not found.
 struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path);
 
-// generic_file_read(generic_file_t*, void*, unsigned long long) -> void
+// generic_file_read(generic_file_t*, void*, unsigned long long) -> unsigned long long
 // Reads binary data from a file.
-void generic_file_read(generic_file_t* file, void* buffer, unsigned long long size);
+unsigned long long generic_file_read(generic_file_t* file, void* buffer, unsigned long long size);
 
 // clean_generic_entry_listing(struct s_dir_entry*) -> void
 // Cleans a list of entries returned by generic_dir_list().

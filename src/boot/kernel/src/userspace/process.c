@@ -5,9 +5,6 @@ pid_t MAX_PID = 10000;
 pid_t current_pid = 1;
 process_t* process_table;
 
-#define FILE_DESCRIPTOR_COUNT 1024
-#define FILE_DESCRIPTOR_PAGE_COUNT (FILE_DESCRIPTOR_COUNT * sizeof(void*) / PAGE_SIZE)
-
 unsigned long long JOB_QUEUE_SIZE = 4096;
 unsigned long long job_queue_pos = 0;
 pid_t* job_queue;
@@ -124,7 +121,6 @@ void process_init_kernel_mmu(pid_t pid) {
 // add_process_to_queue(pid_t) -> int
 // Adds a process to the jobs queue. Returns true if added to the queue.
 int add_process_to_queue(pid_t pid) {
-    process_t* process = fetch_process(pid);
     for (unsigned long long i = 0; i < JOB_QUEUE_SIZE; i++) {
         if (job_queue[i] == 0) {
             job_queue[i] = pid;

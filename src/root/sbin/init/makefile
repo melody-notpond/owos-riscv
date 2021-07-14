@@ -1,6 +1,6 @@
 CODE=./
 CC=riscv64-unknown-elf-gcc
-CFLAGS=-march=rv64g -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld -g -Wall -Wextra
+CFLAGS=-march=rv64gc -mabi=lp64 -static -mcmodel=medany -fvisibility=hidden -nostdlib -nostartfiles -Tlink.ld -g -Wall -Wextra
 
 .PHONY: all clean
 

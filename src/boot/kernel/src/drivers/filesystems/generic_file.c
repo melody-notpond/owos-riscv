@@ -200,9 +200,8 @@ struct s_dir_entry generic_dir_lookup_dir(generic_dir_t* dir, char* name) {
     struct s_dir_entry* entries = (*dir)->entries;
     unsigned long long length = (*dir)->length;
     for (unsigned long long i = 0; i < length; i++) {
-        if (!strcmp(entries[i].name, name)) {
+        if (!strcmp(entries[i].name, name))
             return entries[i];
-        }
     }
 
     // Lookup via file system driver
@@ -255,17 +254,19 @@ struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path) {
     return entry;
 }
 
-// generic_file_read(generic_file_t*, void*, unsigned long long) -> void
+// generic_file_read(generic_file_t*, void*, unsigned long long) -> unsigned long long
 // Reads binary data from a file.
-void generic_file_read(generic_file_t* file, void* buffer, unsigned long long size) {
+unsigned long long generic_file_read(generic_file_t* file, void* buffer, unsigned long long size) {
     char* p = buffer;
     for (unsigned long long i = 0; i < size; i++) {
         int c;
         if ((c = generic_file_read_char(file)) == EOF)
-            break;
+            return i;
         if (p != (void*) 0)
             p[i] = c;
     }
+
+    return size;
 }
 
 // clean_generic_entry_listing(struct s_dir_entry*) -> void
