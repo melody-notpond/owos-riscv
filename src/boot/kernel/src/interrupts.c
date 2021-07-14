@@ -134,7 +134,8 @@ trap_t* handle_interrupt(unsigned long long scause, trap_t* trap) {
                     trap->xs[PROCESS_REGISTER_A2],
                     trap->xs[PROCESS_REGISTER_A3],
                     trap->xs[PROCESS_REGISTER_A4],
-                    trap->xs[PROCESS_REGISTER_A5]
+                    trap->xs[PROCESS_REGISTER_A5],
+                    trap
                 );
                 trap->pc += 4;
                 break;

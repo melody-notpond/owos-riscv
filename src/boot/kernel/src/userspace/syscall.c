@@ -13,7 +13,8 @@ unsigned long long user_syscall(
     unsigned long long a2,
     unsigned long long a3,
     unsigned long long a4,
-    unsigned long long a5
+    unsigned long long a5,
+    trap_t* trap
 ) {
     switch (syscall) {
         // unsigned long long write(unsigned int fd, char* buffer, unsigned long long count);
@@ -47,6 +48,16 @@ unsigned long long user_syscall(
         // pid_t getpid(void);
         case 39: {
             return pid;
+        }
+
+        // void exit(int status);
+        case 60: {
+            // TODO: use this value
+            unsigned char status = a0;
+
+            kill_process(pid);
+            sbi_set_timer(0);
+            return 0;
         }
 
         // pid_t getppid(void);

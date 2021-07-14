@@ -86,9 +86,9 @@ int add_process_to_queue(pid_t pid);
 // Returns the next process in the queue, or 0 if no such process exists.
 pid_t next_process_in_queue();
 
-// jump_to_process(pid_t) -> void
-// Jumps to a given process.
-void jump_to_process(pid_t pid);
+// kill_process(pid_t) -> void
+// Kills the given process.
+void kill_process(pid_t pid);
 
 #endif /* KERNEL_PROCESS_H */
 #define PROCESS_REGISTER_SP 2

@@ -99,7 +99,7 @@ void* alloc_page(unsigned long long page_count) {
                     }
 
                     // Check if still free
-                    for (page_t* p = ptr + 1; p < end; p++) {
+                    for (page_t* p = ptr; p < end; p++) {
                         if (is_used(p)) {
                             free = 0;
                             break;
@@ -126,7 +126,7 @@ void* alloc_page(unsigned long long page_count) {
                 for (; cp < end; cp++) {
                     *cp = PAGE_ALLOC_BYTE_USED;
                 }
-                *(cp - 1) = PAGE_ALLOC_BYTE_LAST;
+                *(cp - 1) |= PAGE_ALLOC_BYTE_LAST;
 
                 return (void*) ptr;
             }

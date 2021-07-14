@@ -11,7 +11,6 @@ unsigned long long syscall_wrapper(
 int main(int argc, char** argv) {
     syscall_wrapper(1, 1, (unsigned long long) "Simple process started\n", 23, 0, 0, 0);
     syscall_wrapper(0x69, 0, 1, 2, 3, 4, 5);
-    while (1) {
-        syscall_wrapper(1, 1, (unsigned long long) "b", 1, 0, 0, 0);
-    }
+    syscall_wrapper(60, 0, 0, 0, 0, 0, 0);
+    syscall_wrapper(1, 1, (unsigned long long) "Welp I messed up :(\n", 20, 0, 0, 0);
 }

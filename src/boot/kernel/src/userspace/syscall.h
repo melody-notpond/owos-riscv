@@ -1,6 +1,7 @@
 #ifndef KERNEL_SYSCALL_H
 #define KERNEL_SYSCALL_H
 
+#include "../interrupts.h"
 #include "process.h"
 
 // user_syscall(unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long, unsigned long long) -> unsigned long long
@@ -13,7 +14,8 @@ unsigned long long user_syscall(
     unsigned long long a2,
     unsigned long long a3,
     unsigned long long a4,
-    unsigned long long a5
+    unsigned long long a5,
+    trap_t* trap
 );
 
 #endif /* KERNEL_SYSCALL_H */

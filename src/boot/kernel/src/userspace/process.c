@@ -5,6 +5,9 @@ pid_t MAX_PID = 10000;
 pid_t current_pid = 1;
 process_t* process_table;
 
+#define FILE_DESCRIPTOR_COUNT 1024
+#define FILE_DESCRIPTOR_PAGE_COUNT (FILE_DESCRIPTOR_COUNT * sizeof(void*) / PAGE_SIZE)
+
 unsigned long long JOB_QUEUE_SIZE = 4096;
 unsigned long long job_queue_pos = 0;
 pid_t* job_queue;
@@ -30,6 +33,7 @@ pid_t spawn_process(pid_t parent_pid) {
             .parent_pid = parent_pid,
             .state = PROCESS_STATE_WAIT,
             .mmu_data = (void*) 0,
+            .file_descriptors = (void*) 0,
             .pc = 0,
             .xs = { 0 },
             .fs = { 0.0 }
@@ -46,6 +50,7 @@ pid_t spawn_process(pid_t parent_pid) {
                 .parent_pid = parent_pid,
                 .state = PROCESS_STATE_WAIT,
                 .mmu_data = (void*) 0,
+                .file_descriptors = (void*) 0,
                 .pc = 0,
                 .xs = { 0 },
                 .fs = { 0.0 }
@@ -71,9 +76,12 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
         return pid;
 
     process_t* process = fetch_process(pid);
-    process->file_descriptors = alloc_page(2);
+    process->file_descriptors = alloc_page(FILE_DESCRIPTOR_PAGE_COUNT);
     process->mmu_data = create_mmu_top();
-    map_mmu(process->mmu_data, process->file_descriptors, process->file_descriptors, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    for (unsigned long long i = 0; i < FILE_DESCRIPTOR_PAGE_COUNT; i++) {
+        void* map = (void*) (process->file_descriptors) + i * PAGE_SIZE;
+        map_mmu(process->mmu_data, map, map, MMU_FLAG_READ | MMU_FLAG_WRITE);
+    }
 
     void* last_pointer = 0;
     for (int i = 0; i < elf->header.program_header_num; i++) {
@@ -131,8 +139,8 @@ int add_process_to_queue(pid_t pid) {
 // Returns the next process in the queue, or 0 if no such process exists.
 pid_t next_process_in_queue() {
     unsigned long long last_in_queue = job_queue_pos++;
-        if (last_in_queue >= JOB_QUEUE_SIZE)
-            last_in_queue %= JOB_QUEUE_SIZE;
+    if (last_in_queue >= JOB_QUEUE_SIZE)
+        last_in_queue %= JOB_QUEUE_SIZE;
 
     while (last_in_queue != job_queue_pos) {
         if (job_queue[job_queue_pos] != 0)
@@ -145,3 +153,24 @@ pid_t next_process_in_queue() {
     return job_queue[last_in_queue];
 }
 
+// kill_process(pid_t) -> void
+// Kills the given process.
+void kill_process(pid_t pid) {
+    process_t* process = fetch_process(pid);
+    if (process->file_descriptors != (void*) 0) {
+        for (unsigned long long i = 0; i < FILE_DESCRIPTOR_COUNT; i++) {
+            if (process->file_descriptors[i] != (void*) 0)
+                close_generic_file(process->file_descriptors[i]);
+        }
+        dealloc_page(process->file_descriptors);
+    }
+
+    process->state = PROCESS_STATE_DEAD;
+
+    for (unsigned long long i = 0; i < JOB_QUEUE_SIZE; i++) {
+        if (job_queue[i] == pid)
+            job_queue[i] = 0;
+    }
+
+    clean_mmu_mappings(process->mmu_data, 0);
+}

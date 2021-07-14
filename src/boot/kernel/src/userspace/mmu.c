@@ -194,7 +194,6 @@ void copy_mmu_globals(mmu_level_1_t* dest, mmu_level_1_t* src) {
         }
     }
 
-
     // Map mmu
     map_mmu(dest, dest, dest, MMU_FLAG_READ | MMU_FLAG_WRITE);
     for (int i = 0; i < (int) (PAGE_SIZE / sizeof(void*)); i++) {
