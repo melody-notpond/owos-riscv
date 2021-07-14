@@ -1,9 +1,24 @@
 #include <stdarg.h>
 
+#include "console.h"
 #include "../../lib/memory.h"
 #include "../../lib/printf.h"
-#include "console.h"
 #include "../../opensbi.h"
+
+extern generic_filesystem_t console_fs;
+
+// console_generic_file_write(generic_file_t*) -> int
+// Reads a character from the console.
+int console_generic_file_read(generic_file_t* _) {
+    return console_getc();
+}
+
+// console_generic_file_write(generic_file_t*, int) -> int
+// Writes a character to the console.
+int console_generic_file_write(generic_file_t* _, int c) {
+    sbi_console_putchar(c);
+    return 0;
+}
 
 // console_getc_noecho() -> char
 // Gets a character from the console without echoing it back.

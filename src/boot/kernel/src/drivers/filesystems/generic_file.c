@@ -7,6 +7,8 @@
 
 char (*mount_functions[MOUNT_FUNC_COUNT])(generic_block_t*, generic_filesystem_t*, generic_file_t*) = { 0 };
 
+generic_filesystem_t console_fs;
+
 // register_fs_mounter(char (*)(generic_block_t*, generic_filesystem_t*, generic_file_t*)) -> void
 // Register a file system mounter/driver.
 void register_fs_mounter(char (*mounter)(generic_block_t*, generic_filesystem_t*, generic_file_t*)) {
@@ -255,15 +257,32 @@ struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path) {
 }
 
 // generic_file_read(generic_file_t*, void*, unsigned long long) -> unsigned long long
-// Reads binary data from a file.
+// Reads binary data from a file. Returns the number of bytes read.
 unsigned long long generic_file_read(generic_file_t* file, void* buffer, unsigned long long size) {
     char* p = buffer;
+    if (p == (void*) 0)
+        return 0;
+
     for (unsigned long long i = 0; i < size; i++) {
         int c;
         if ((c = generic_file_read_char(file)) == EOF)
             return i;
-        if (p != (void*) 0)
-            p[i] = c;
+        p[i] = c;
+    }
+
+    return size;
+}
+
+// generic_file_write(generic_file_t*, void*, unsigned long long) -> unsigned long long
+// Writes binary data to a file. Returns the number of bytes written.
+unsigned long long generic_file_write(generic_file_t* file, void* buffer, unsigned long long size) {
+    char* p = buffer;
+    if (p == (void*) 0)
+        return 0;
+
+    for (unsigned long long i = 0; i < size; i++) {
+        if (generic_file_write_char(file, p[i]))
+            return i;
     }
 
     return size;
@@ -279,4 +298,13 @@ void clean_generic_entry_listing(struct s_dir_entry* entries) {
     }
 
     free(entries);
+}
+
+// copy_generic_file(generic_file_t*, generic_file_t*) -> void
+// Copies a generic file.
+void copy_generic_file(generic_file_t* dest, generic_file_t* src) {
+    dest->parent = src->parent;
+    dest->fs = src->fs;
+    dest->type = src->type;
+    // TODO
 }

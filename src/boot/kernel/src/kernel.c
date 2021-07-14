@@ -20,6 +20,12 @@ trap_t trap_structs[32];
 void kinit(unsigned long long hartid, void* fdt) {
     console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, fdt);
 
+    // Init console file system
+    console_fs = (generic_filesystem_t) {
+        .read_char = console_generic_file_read,
+        .write_char = console_generic_file_write
+    };
+
     // Create trap structure
     trap_structs[hartid] = (trap_t) {
         .hartid = hartid,
@@ -123,10 +129,28 @@ void kmain() {
     elf_t init = load_executable_elf_from_file(root, "/sbin/init");
     pid_t initd = load_elf_as_process(1, &init, 1);
     free_elf(&init);
+    process_t* initd_process = fetch_process(initd);
+
+    // Set up stdin, stdout, and stderr
+    initd_process->file_descriptors[0] = malloc(sizeof(generic_file_t));
+    *initd_process->file_descriptors[0] = (generic_file_t) {
+        .type = GENERIC_FILE_TYPE_REGULAR,
+        .fs = &console_fs
+    };
+    initd_process->file_descriptors[1] = malloc(sizeof(generic_file_t));
+    *initd_process->file_descriptors[1] = (generic_file_t) {
+        .type = GENERIC_FILE_TYPE_REGULAR,
+        .fs = &console_fs
+    };
+    initd_process->file_descriptors[2] = malloc(sizeof(generic_file_t));
+    *initd_process->file_descriptors[2] = (generic_file_t) {
+        .type = GENERIC_FILE_TYPE_REGULAR,
+        .fs = &console_fs
+    };
 
     // Load the new page table and clean up the old page table
     process_init_kernel_mmu(initd);
-    mmu_level_1_t* new_top = fetch_process(initd)->mmu_data;
+    mmu_level_1_t* new_top = initd_process->mmu_data;
     mmu = 0x8000000000000000 | (((unsigned long long) new_top) >> 12);
     asm volatile("csrw satp, %0" : "=r" (mmu));
     clean_mmu_mappings(top, 0);

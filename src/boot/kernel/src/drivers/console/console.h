@@ -1,6 +1,18 @@
 #ifndef KERNEL_CONSOLE_H
 #define KERNEL_CONSOLE_H
 
+#include "../filesystems/generic_file.h"
+
+extern generic_filesystem_t console_fs;
+
+// console_generic_file_write(generic_file_t*) -> int
+// Reads a character from the console.
+int console_generic_file_read(generic_file_t* _);
+
+// console_generic_file_write(generic_file_t*, int) -> int
+// Writes a character to the console.
+int console_generic_file_write(generic_file_t* _, int c);
+
 // console_puts(char*) -> void
 // Puts a string onto the console.
 void console_puts(char*);

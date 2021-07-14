@@ -36,30 +36,19 @@ unsigned long long user_syscall(
 
         // unsigned long long write(int fd, char* buffer, unsigned long long count);
         case 1: {
-            int fd = a0;
-            char* buffer = (void*) a1;
+            int fd = (int) a0;
+            void* buffer = (void*) a1;
             unsigned long long count = a2;
+
+            if (fd > FILE_DESCRIPTOR_COUNT)
+                return -1;
+
             process_t* process = fetch_process(pid);
-            generic_file_t** file_descriptors = process->file_descriptors;
 
-            // TODO: make this not hardcoded
-            if (fd == 1) {
-                for (unsigned long long i = 0; i < count; i++) {
-                    sbi_console_putchar(buffer[i]);
-                }
-                return count;
-            }
-
-            if (fd >= FILE_DESCRIPTOR_COUNT)
-                return -1;
-            generic_file_t* file = file_descriptors[fd];
-            if (file == (void*) 0)
+            if (process->file_descriptors[fd] == (void*) 0)
                 return -1;
 
-            // TODO
-            return -1;
-
-            // return count;
+            return generic_file_write(process->file_descriptors[fd], buffer, count);
         }
 
         // int open(char* path, int flags, int mode);
@@ -151,7 +140,7 @@ unsigned long long user_syscall(
         case 110:
             return fetch_process(pid)->parent_pid;
 
-        // pid_t spawn(char* path, char* argv[], char* envp[]);
+        // pid_t spawn(char* path, char* argv[], char* envp[], int stdin, int stdout, int stderr);
         case 314: {
             char* path = (void*) a0;
 
@@ -159,10 +148,36 @@ unsigned long long user_syscall(
             char** argv = (void*) a1;
             char** envp = (void*) a2;
 
+            int stdin  = (int) a3;
+            int stdout = (int) a4;
+            int stderr = (int) a5;
+
+            // Create process
             elf_t elf = load_executable_elf_from_file(root, path);
             pid_t p = load_elf_as_process(pid, &elf, 1);
             free_elf(&elf);
             process_init_kernel_mmu(p);
+
+            // Set file descriptors
+            process_t* process = fetch_process(pid);
+            process_t* child = fetch_process(p);
+
+            if (stdin < FILE_DESCRIPTOR_COUNT && process->file_descriptors[stdin] != (void*) 0) {
+                child->file_descriptors[0] = malloc(sizeof(generic_file_t));
+                copy_generic_file(child->file_descriptors[0], process->file_descriptors[stdin]);
+            }
+
+            if (stdout < FILE_DESCRIPTOR_COUNT && process->file_descriptors[stdout] != (void*) 0) {
+                child->file_descriptors[1] = malloc(sizeof(generic_file_t));
+                copy_generic_file(child->file_descriptors[1], process->file_descriptors[stdout]);
+            }
+
+            if (stderr < FILE_DESCRIPTOR_COUNT && process->file_descriptors[stderr] != (void*) 0) {
+                child->file_descriptors[1] = malloc(sizeof(generic_file_t));
+                copy_generic_file(child->file_descriptors[1], process->file_descriptors[stderr]);
+            }
+
+            // Add process to queue
             add_process_to_queue(p);
             return p;
         }

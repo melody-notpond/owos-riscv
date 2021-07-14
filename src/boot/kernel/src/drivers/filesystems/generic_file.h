@@ -22,6 +22,7 @@ typedef struct s_generic_filesystem {
     void* mount;
     char (*unmount)(struct s_generic_filesystem*, generic_file_t*);
     int (*read_char)(generic_file_t*);
+    int (*write_char)(generic_file_t*, int);
     struct s_dir_entry (*lookup)(generic_dir_t*, char*);
     struct s_dir_entry* (*list)(generic_dir_t*);
     unsigned long long (*size)(generic_file_t*);
@@ -89,10 +90,18 @@ static inline unsigned long long generic_file_size(generic_file_t* file) {
 // generic_file_read_char(generic_file_t*) -> int
 // Reads a character from a file, returning EOF if no more characters are available.
 static inline int generic_file_read_char(generic_file_t* file) {
-    if (file->type == GENERIC_FILE_TYPE_REGULAR && generic_file_size(file) > file->pos)
+    if (file->type == GENERIC_FILE_TYPE_REGULAR && generic_file_size(file) > file->pos && file->fs->read_char)
         return file->fs->read_char(file);
     else
         return EOF;
+}
+
+// generic_file_write_char(generic_file_t*, int) -> int
+// Writes a character to a file. Returns 0 on success.
+static inline int generic_file_write_char(generic_file_t* file, int c) {
+    if (file->type == GENERIC_FILE_TYPE_REGULAR && file->fs->write_char)
+        return file->fs->write_char(file, c);
+    return -1;
 }
 
 static inline void generic_file_seek(generic_file_t* file, unsigned long long pos) {
@@ -139,12 +148,20 @@ void generic_dir_append_entry(generic_dir_t* dir, struct s_dir_entry entry);
 struct s_dir_entry generic_dir_lookup(generic_dir_t* dir, char* path);
 
 // generic_file_read(generic_file_t*, void*, unsigned long long) -> unsigned long long
-// Reads binary data from a file.
+// Reads binary data from a file. Returns the number of bytes read.
 unsigned long long generic_file_read(generic_file_t* file, void* buffer, unsigned long long size);
+
+// generic_file_write(generic_file_t*, void*, unsigned long long) -> unsigned long long
+// Writes binary data to a file. Returns the number of bytes written.
+unsigned long long generic_file_write(generic_file_t* file, void* buffer, unsigned long long size);
 
 // clean_generic_entry_listing(struct s_dir_entry*) -> void
 // Cleans a list of entries returned by generic_dir_list().
 void clean_generic_entry_listing(struct s_dir_entry* entries);
+
+// copy_generic_file(generic_file_t*, generic_file_t*) -> void
+// Copies a generic file.
+void copy_generic_file(generic_file_t* dest, generic_file_t* src);
 
 extern generic_dir_t* root;
 
