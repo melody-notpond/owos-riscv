@@ -159,8 +159,7 @@ void kill_process(pid_t pid) {
     process_t* process = fetch_process(pid);
     if (process->file_descriptors != (void*) 0) {
         for (unsigned long long i = 0; i < FILE_DESCRIPTOR_COUNT; i++) {
-            if (process->file_descriptors[i] != (void*) 0)
-                close_generic_file(process->file_descriptors[i]);
+            close_generic_file(process->file_descriptors[i]);
         }
         dealloc_page(process->file_descriptors);
     }
