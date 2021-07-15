@@ -147,7 +147,7 @@ unsigned long long user_syscall(
             if (prot & PROT_EXEC)
                 f |= MMU_FLAG_EXEC;
             for (unsigned long long i = 0; i < page_num; i++) {
-                int r = mmu_protect(process->mmu_data, addr + i * PAGE_SIZE, MMU_FLAG_USER | MMU_FLAG_ALLOCED | f, 1);
+                int r = mmu_protect(process->mmu_data, addr + i * PAGE_SIZE, MMU_FLAG_USER | f, 1);
                 if (r != 0)
                     return -1;
             }
