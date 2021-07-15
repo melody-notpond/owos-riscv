@@ -59,32 +59,18 @@ unsigned long long user_syscall(
             int flags = (int) a1;
             int mode = (int) a2;
 
-            struct s_dir_entry dir = generic_dir_lookup(root, path);
+            struct s_dir_entry entry = generic_dir_lookup(root, path);
+            if (entry.file == (void*) 0)
+                return -1;
+
             process_t* process = fetch_process(pid);
-            switch (dir.tag) {
-                case DIR_ENTRY_TYPE_REGULAR:
-                    for (int i = 3; i < FILE_DESCRIPTOR_COUNT; i++) {
-                        if (process->file_descriptors[i] == (void*) 0) {
-                            process->file_descriptors[i] = dir.value.file;
-                            return i;
-                        }
-                    }
-                    return -1;
-
-                // TODO
-                case DIR_ENTRY_TYPE_DIR:
-                    return -1;
-
-                // TODO
-                case DIR_ENTRY_TYPE_BLOCK:
-                    return -1;
-
-                // Error
-                case DIR_ENTRY_TYPE_UNKNOWN:
-                    return -1;
-                case DIR_ENTRY_TYPE_UNUSED:
-                    return -1;
+            for (int i = 3; i < FILE_DESCRIPTOR_COUNT; i++) {
+                if (process->file_descriptors[i] == (void*) 0) {
+                    process->file_descriptors[i] = entry.file;
+                    return i;
+                }
             }
+            return -1;
         }
 
         // int close(int fd)

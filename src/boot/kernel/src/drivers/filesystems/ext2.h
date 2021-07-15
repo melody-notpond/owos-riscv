@@ -124,9 +124,9 @@ typedef struct {
     ext2fs_block_descriptor_t* desc_table;
 } ext2fs_mount_t;
 
-// ext2_mount(generic_block_t*, generic_filesystem_t*, generic_file_t*) -> char
+// ext2_mount(generic_block_t*, generic_file_t*) -> char
 // Mounts an ext2 file system from a generic block device. Returns 0 on success.
-char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t* root);
+char ext2_mount(generic_block_t* block, generic_file_t* root);
 
 // ext2_fetch_from_directory(ext2fs_mount_t*, ext2fs_inode_t*, char*) -> unsigned int
 // Fetches an inode's index from a directory.

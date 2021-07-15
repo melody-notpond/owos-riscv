@@ -86,9 +86,9 @@ typedef struct {
     void** data;
 } elf_t;
 
-// load_executable_elf_from_file(generic_dir_t*, char*) -> elf_t
+// load_executable_elf_from_file(generic_file_t*, char*) -> elf_t
 // Loads an elf file from disk.
-elf_t load_executable_elf_from_file(generic_dir_t* dir, char* path);
+elf_t load_executable_elf_from_file(generic_file_t* dir, char* path);
 
 // free_elf(elf_t*) -> void
 // Frees memory associated with an elf structure.

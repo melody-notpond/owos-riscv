@@ -5,15 +5,15 @@
 #define ELF_CLASS_64 2
 #define ELF_DATA_LIL_ENDIAN 1
 
-// load_executable_elf_from_file(generic_dir_t*, char*) -> elf_t
+// load_executable_elf_from_file(generic_file_t*, char*) -> elf_t
 // Loads an header file from disk.
-elf_t load_executable_elf_from_file(generic_dir_t* dir, char* path) {
+elf_t load_executable_elf_from_file(generic_file_t* dir, char* path) {
     struct s_dir_entry entry = generic_dir_lookup(dir, path);
-    if (entry.tag != DIR_ENTRY_TYPE_REGULAR)
+    if (entry.file->type != GENERIC_FILE_TYPE_REGULAR)
         return (elf_t) { 0 };
 
     // When the impostor is sus!
-    generic_file_t* file = entry.value.file;
+    generic_file_t* file = entry.file;
 
     // Read header header
     elf_header_t header;

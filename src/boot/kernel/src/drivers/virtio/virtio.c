@@ -5,7 +5,7 @@
 
 #define VIRTIO_MAGIC 0x74726976
 
-void virtio_probe(generic_dir_t* dev) {
+void virtio_probe(generic_file_t* dev) {
     volatile void* base = (void*) VIRTIO_MMIO_BASE;
 
     for (; (long long) base <= VIRTIO_MMIO_TOP; base += VIRTIO_MMIO_INTERVAL) {

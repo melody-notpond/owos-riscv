@@ -105,7 +105,7 @@ typedef struct __attribute__((__packed__, aligned(4))) {
 	volatile char config[];
 } virtio_mmio_t;
 
-void virtio_probe(generic_dir_t* dev);
+void virtio_probe(generic_file_t* dev);
 
 #endif /* KERNEL_VIRTIO_H */
 

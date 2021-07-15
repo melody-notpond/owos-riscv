@@ -14,7 +14,7 @@
 
 #define ROOT_DISC "/dev/virt-blk7"
 
-generic_dir_t* root;
+generic_file_t* root;
 trap_t trap_structs[32];
 
 void kinit(unsigned long long hartid, void* fdt) {
@@ -44,16 +44,24 @@ void kinit(unsigned long long hartid, void* fdt) {
     init_process_table();
 
     // Initialise root and /dev file system
-    root = init_generic_dir();
-    generic_dir_t* dev = init_generic_dir();
+    root = malloc(sizeof(generic_file_t));
+    *root = (generic_file_t) {
+        .type = GENERIC_FILE_TYPE_DIR,
+        .parent = (void*) 0,
+        .fs = (void*) 0,
+        .dir = init_generic_dir()
+    };
+    generic_file_t* dev = malloc(sizeof(generic_file_t));
+    *dev = (generic_file_t) {
+        .type = GENERIC_FILE_TYPE_DIR,
+        .fs = (void*) 0,
+        .dir = init_generic_dir()
+    };
 
     // Add the /dev file system to the root file system
     generic_dir_append_entry(root, (struct s_dir_entry) {
         .name = strdup("dev"),
-        .tag = DIR_ENTRY_TYPE_DIR,
-        .value = {
-            .dir = dev
-        }
+        .file = dev
     });
 
     // Probe for available virtio devices
@@ -63,14 +71,13 @@ void kinit(unsigned long long hartid, void* fdt) {
     register_fs_mounter(ext2_mount);
 
     // Enable all interrupts in the PLIC
-    // TODO: don't hardcode the context
-    volatile unsigned int* enables = get_context_enable_bits(PLIC_CONTEXT(0, 1));
+    volatile unsigned int* enables = get_context_enable_bits(PLIC_CONTEXT(hartid, 1));
     for (unsigned int i = 0; i < (PLIC_COUNT + 1) / 32; i++) {
         enables[i] = 0xffffffff;
     }
 
     // Set priority threshold
-    volatile unsigned int* threshold = get_context_priority_threshold(PLIC_CONTEXT(0, 1));
+    volatile unsigned int* threshold = get_context_priority_threshold(PLIC_CONTEXT(hartid, 1));
     *threshold = 0;
 
     // Set next time interrupt
@@ -90,7 +97,7 @@ void kmain() {
 
     // Mount root file system
     struct s_dir_entry entry = generic_dir_lookup(root, ROOT_DISC);
-    if (!mount_block_device(root, entry.value.block)) {
+    if (!mount_block_device(root, entry.file->block)) {
         console_puts("Mounted root file system (" ROOT_DISC ")\n");
     } else {
         console_puts("Failed to mount file system\n");
@@ -134,17 +141,17 @@ void kmain() {
     // Set up stdin, stdout, and stderr
     initd_process->file_descriptors[0] = malloc(sizeof(generic_file_t));
     *initd_process->file_descriptors[0] = (generic_file_t) {
-        .type = GENERIC_FILE_TYPE_REGULAR,
+        .type = GENERIC_FILE_TYPE_SPECIAL,
         .fs = &console_fs
     };
     initd_process->file_descriptors[1] = malloc(sizeof(generic_file_t));
     *initd_process->file_descriptors[1] = (generic_file_t) {
-        .type = GENERIC_FILE_TYPE_REGULAR,
+        .type = GENERIC_FILE_TYPE_SPECIAL,
         .fs = &console_fs
     };
     initd_process->file_descriptors[2] = malloc(sizeof(generic_file_t));
     *initd_process->file_descriptors[2] = (generic_file_t) {
-        .type = GENERIC_FILE_TYPE_REGULAR,
+        .type = GENERIC_FILE_TYPE_SPECIAL,
         .fs = &console_fs
     };
 

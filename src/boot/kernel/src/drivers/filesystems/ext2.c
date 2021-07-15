@@ -269,8 +269,22 @@ void ext2_dump_inode_buffer(ext2fs_mount_t* mount, ext2fs_inode_t* file, void* d
 // ext2_generic_file_size(generic_file_t*) -> unsigned long long
 // Returns the file size of a file.
 unsigned long long ext2_generic_file_size(generic_file_t* file) {
-    ext2fs_inode_t* inode = file->metadata_buffer;
-    return ((inode->mode & 0xf000) == INODE_FILE_REGULAR ? (unsigned long long) inode->dir_acl : 0) << 32 | (unsigned long long) inode->size;
+    switch (file->type) {
+        case GENERIC_FILE_TYPE_REGULAR: {
+            ext2fs_inode_t* inode = file->buffer->metadata_buffer;
+            return (((unsigned long long) inode->dir_acl) << 32) | (unsigned long long) inode->size;
+        }
+
+        case GENERIC_FILE_TYPE_DIR: {
+            ext2fs_inode_t* inode = file->buffer->metadata_buffer;
+            return (unsigned long long) inode->size;
+        }
+
+        case GENERIC_FILE_TYPE_BLOCK:
+        case GENERIC_FILE_TYPE_SPECIAL:
+        case GENERIC_FILE_TYPE_UNKNOWN:
+            return 0;
+    }
 }
 
 // ext2_generic_file_read_char(generic_file_t*) -> int
@@ -278,10 +292,14 @@ unsigned long long ext2_generic_file_size(generic_file_t* file) {
 int ext2_generic_file_read_char(generic_file_t* file) {
     if (file == (void*) 0)
         return EOF;
-    ext2fs_inode_t* inode = file->metadata_buffer;
+    if (file->type != GENERIC_FILE_TYPE_REGULAR)
+        return EOF;
+
+    generic_file_buffer_t* b = file->buffer;
+    ext2fs_inode_t* inode = b->metadata_buffer;
     if (inode == (void*) 0)
         return EOF;
-    if (file->pos >= ext2_generic_file_size(file))
+    if (b->pos >= ext2_generic_file_size(file))
         return EOF;
 
     // Get some useful metadata
@@ -289,24 +307,24 @@ int ext2_generic_file_read_char(generic_file_t* file) {
     unsigned long long block_size = 1024 << mount->superblock->log_block_size;
 
     // Get character
-    char* buffer = (char*) (file->buffers[file->current_buffer]);
-    char c = buffer[file->buffer_pos];
+    char* buffer = (char*) (b->buffers[b->current_buffer]);
+    char c = buffer[b->buffer_pos];
 
     // Set up buffers for the next character
-    file->pos++;
-    file->buffer_pos++;
-    if (file->buffer_pos >= block_size) {
+    b->pos++;
+    b->buffer_pos++;
+    if (b->buffer_pos >= block_size) {
         // Update index
-        unsigned long long next_index = file->buffer_indices[file->current_buffer] + 1;
-        file->buffer_pos = 0;
-        file->current_buffer++;
-        if (file->current_buffer >= BUFFER_COUNT - 3)
-            file->current_buffer = 0;
+        unsigned long long next_index = b->buffer_indices[b->current_buffer] + 1;
+        b->buffer_pos = 0;
+        b->current_buffer++;
+        if (b->current_buffer >= BUFFER_COUNT - 3)
+            b->current_buffer = 0;
 
-        if (file->buffers[file->current_buffer] == (void*) 0)
-            file->buffers[file->current_buffer] = malloc(block_size);
+        if (b->buffers[b->current_buffer] == (void*) 0)
+            b->buffers[b->current_buffer] = malloc(block_size);
 
-        unsigned long long block = file->pos / block_size;
+        unsigned long long block = b->pos / block_size;
         unsigned long long block_id = 0;
 
         // Direct blocks
@@ -317,28 +335,27 @@ int ext2_generic_file_read_char(generic_file_t* file) {
         else return EOF;
 
         // Get block
-        ext2fs_load_block(mount->block, mount->superblock, block_id, file->buffers[file->current_buffer]);
+        ext2fs_load_block(mount->block, mount->superblock, block_id, b->buffers[b->current_buffer]);
 
         // Set metadata stuff
-        file->buffer_block_indices[file->current_buffer + 1] = block_id;
-        file->buffer_indices[file->current_buffer] = next_index;
+        b->buffer_block_indices[b->current_buffer + 1] = block_id;
+        b->buffer_indices[b->current_buffer] = next_index;
     }
 
     return c;
 }
 
-struct s_dir_entry ext2_generic_dir_lookup(generic_dir_t* dir, char* name) {
+struct s_dir_entry ext2_generic_dir_lookup(generic_file_t* dir, char* name) {
     // Get inode index
-    generic_dir_t d = *dir;
-    ext2fs_mount_t* mount = d->fs.mount;
-    unsigned int inode_index = ext2_fetch_from_directory(mount, d->value->metadata_buffer, name);
+    generic_dir_t d = *dir->dir;
+    ext2fs_mount_t* mount = dir->fs->mount;
+    unsigned int inode_index = ext2_fetch_from_directory(mount, d->buffer->metadata_buffer, name);
     if (inode_index == 0)
         return (struct s_dir_entry) { 0 };
 
     // Get inode
     ext2fs_inode_t* inode = ext2_load_inode(mount, inode_index);
     unsigned short t = inode->mode & 0xf000;
-    dir_entry_type_t dir_type = t == INODE_FILE_DIR ? DIR_ENTRY_TYPE_DIR : t == INODE_FILE_REGULAR ? DIR_ENTRY_TYPE_REGULAR : DIR_ENTRY_TYPE_UNKNOWN;
     generic_file_type_t file_type = t == INODE_FILE_DIR ? GENERIC_FILE_TYPE_DIR : t == INODE_FILE_REGULAR ? GENERIC_FILE_TYPE_REGULAR : GENERIC_FILE_TYPE_UNKNOWN;
 
     // Get first buffer
@@ -349,11 +366,8 @@ struct s_dir_entry ext2_generic_dir_lookup(generic_dir_t* dir, char* name) {
     }
 
     // Create generic file
-    generic_file_t* file = malloc(sizeof(generic_file_t));
-    *file = (generic_file_t) {
-        .parent = dir,
-        .type = file_type,
-        .fs = &d->fs,
+    generic_file_buffer_t* b = malloc(sizeof(generic_file_buffer_t));
+    *b = (generic_file_buffer_t) {
         .pos = 0,
         .current_buffer = 0,
         .buffer_pos = 0,
@@ -363,22 +377,28 @@ struct s_dir_entry ext2_generic_dir_lookup(generic_dir_t* dir, char* name) {
         .buffers = { buffer, 0 },
         .written_buffers = { 0 }
     };
+    generic_file_t* file = malloc(sizeof(generic_file_t));
+    *file = (generic_file_t) {
+        .parent = dir,
+        .type = file_type,
+        .fs = dir->fs,
+    };
 
     // Append entry
     struct s_dir_entry entry = {
         .name = strdup(name),
-        .tag = dir_type,
+        .file = file
     };
 
-    if (dir_type == DIR_ENTRY_TYPE_DIR) {
+    if (file_type == GENERIC_FILE_TYPE_DIR) {
         generic_dir_t* dir = init_generic_dir();
         generic_dir_t d2 = *dir;
-        d2->fs = d->fs;
-        d2->value = file;
-        entry.value.dir = dir;
+        d2->buffer = b;
+        file->dir = dir;
     } else {
-        entry.value.file = file;
+        file->buffer = b;
     }
+    entry.file = file;
 
     return entry;
 }
@@ -389,6 +409,10 @@ generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsign
     generic_file_t file = {
         .type = GENERIC_FILE_TYPE_REGULAR,
         .fs = fs,
+        .buffer = malloc(sizeof(generic_file_buffer_t))
+    };
+
+    *file.buffer = (generic_file_buffer_t) {
         .pos = 0,
         .current_buffer = 0,
         .buffer_pos = 0,
@@ -400,14 +424,15 @@ generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsign
     };
 
     // Failed to get inode
-    if (file.metadata_buffer == (void*) 0)
+    if (file.buffer->metadata_buffer == (void*) 0)
         return file;
 
     // Inode does not represent a regular file
-    ext2fs_inode_t* inode = file.metadata_buffer;
+    ext2fs_inode_t* inode = file.buffer->metadata_buffer;
     if ((inode->mode & 0xf000) != INODE_FILE_REGULAR) {
-        free(file.metadata_buffer);
-        file.metadata_buffer = (void*) 0;
+        free(file.buffer->metadata_buffer);
+        free(file.buffer);
+        file.buffer = (void*) 0;
         return file;
     }
 
@@ -419,51 +444,53 @@ generic_file_t ext2_create_generic_regular_file(generic_filesystem_t* fs, unsign
     ext2fs_mount_t* mount = fs->mount;
     unsigned long long block_size = 1024 << mount->superblock->log_block_size;
     void* buffer = malloc(block_size);
-    file.buffer_indices[0] = 0;
-    file.buffer_block_indices[1] = inode->block[0];
-    ext2fs_load_block(mount->block, mount->superblock, file.buffer_block_indices[1], buffer);
-    file.buffers[0] = buffer;
-
+    file.buffer->buffer_indices[0] = 0;
+    file.buffer->buffer_block_indices[1] = inode->block[0];
+    ext2fs_load_block(mount->block, mount->superblock, file.buffer->buffer_block_indices[1], buffer);
+    file.buffer->buffers[0] = buffer;
     return file;
 }
 
 // ext2_unmount(generic_filesystem_t*, generic_file_t*) -> char
 // Unmounts an ext2 file system.
-char ext2_unmount(generic_filesystem_t* fs, generic_file_t* root) {
-    ext2fs_mount_t* mount = fs->mount;
+char ext2_unmount(generic_file_t* root) {
+    ext2fs_mount_t* mount = root->fs->mount;
     free(mount->superblock);
     free(mount->desc_table);
     free(mount);
-    root = root; // suppress warning (TODO: save state)
+    // TODO: save state
     return 0;
 }
 
 // ext2_generic_file_seek(generic_file_t*, unsigned long long) -> void
 // Seeks to a position in the file.
 void ext2_generic_file_seek(generic_file_t* file, unsigned long long pos) {
+    if (file->type != GENERIC_FILE_TYPE_REGULAR)
+        return;
+
     ext2fs_mount_t* mount = file->fs->mount;
     unsigned long long block_size = 1024 << mount->superblock->log_block_size;
     unsigned long long buffer = pos / block_size;
     unsigned long long buffer_pos = pos % block_size;
-    file->pos = pos;
-    file->buffer_pos = buffer_pos;
+    file->buffer->pos = pos;
+    file->buffer->buffer_pos = buffer_pos;
 
     // Search through already loaded buffers
     for (int i = 0; i < BUFFER_COUNT - 3; i++) {
-        if (file->buffer_indices[i] == buffer) {
-            file->current_buffer = i;
+        if (file->buffer->buffer_indices[i] == buffer) {
+            file->buffer->current_buffer = i;
             return;
         }
     }
 
     // Get new buffer
-    ext2fs_inode_t* inode = file->metadata_buffer;
-    file->current_buffer++;
-    if (file->current_buffer >= BUFFER_COUNT - 3)
-        file->current_buffer = 0;
+    ext2fs_inode_t* inode = file->buffer->metadata_buffer;
+    file->buffer->current_buffer++;
+    if (file->buffer->current_buffer >= BUFFER_COUNT - 3)
+        file->buffer->current_buffer = 0;
 
-    if (file->buffers[file->current_buffer] == (void*) 0)
-        file->buffers[file->current_buffer] = malloc(block_size);
+    if (file->buffer->buffers[file->buffer->current_buffer] == (void*) 0)
+        file->buffer->buffers[file->buffer->current_buffer] = malloc(block_size);
 
     unsigned long long block_id = 0;
 
@@ -475,11 +502,11 @@ void ext2_generic_file_seek(generic_file_t* file, unsigned long long pos) {
     else return;
 
     // Get block
-    ext2fs_load_block(mount->block, mount->superblock, block_id, file->buffers[file->current_buffer]);
+    ext2fs_load_block(mount->block, mount->superblock, block_id, file->buffer->buffers[file->buffer->current_buffer]);
 
     // Set metadata stuff
-    file->buffer_block_indices[file->current_buffer + 1] = block_id;
-    file->buffer_indices[file->current_buffer] = buffer;
+    file->buffer->buffer_block_indices[file->buffer->current_buffer + 1] = block_id;
+    file->buffer->buffer_indices[file->buffer->current_buffer] = buffer;
 }
 
 struct s_dir_entry* dir_entry_list_append(struct s_dir_entry* entries, unsigned long long* size, unsigned long long* length, struct s_dir_entry entry) {
@@ -490,8 +517,8 @@ struct s_dir_entry* dir_entry_list_append(struct s_dir_entry* entries, unsigned 
 
     entries[*length] = entry;
     entries[*length + 1] = (struct s_dir_entry) {
-        .tag = DIR_ENTRY_TYPE_UNUSED,
-        .name = (void*) 0
+        .name = (void*) 0,
+        .file = (void*) 0
     };
 
     *length += 1;
@@ -517,9 +544,7 @@ struct s_dir_entry* ext2_generic_dir_list_helper(ext2fs_mount_t* mount, unsigned
         // TODO: Get metadata from inode
         struct s_dir_entry entry = {
             .name = name,
-            .permissions = 0,
-            .tag = DIR_ENTRY_TYPE_UNKNOWN,
-            .value = { 0 }
+            .file = (void*) 0
         };
 
         entries = dir_entry_list_append(entries, size, length, entry);
@@ -528,14 +553,14 @@ struct s_dir_entry* ext2_generic_dir_list_helper(ext2fs_mount_t* mount, unsigned
     return entries;
 }
 
-// ext2_generic_dir_list(generic_dir_t*) -> struct s_dir_entry*
+// ext2_generic_dir_list(generic_file_t*) -> struct s_dir_entry*
 // Returns a listing of the files in a directory.
-struct s_dir_entry* ext2_generic_dir_list(generic_dir_t* dir) {
+struct s_dir_entry* ext2_generic_dir_list(generic_file_t* dir) {
     unsigned long long length = 0;
     unsigned long long size = 8;
     struct s_dir_entry* entries = malloc(size * sizeof(struct s_dir_entry));
-    ext2fs_mount_t* mount = (*dir)->fs.mount;
-    ext2fs_inode_t* inode = (*dir)->value->metadata_buffer;
+    ext2fs_mount_t* mount = dir->fs->mount;
+    ext2fs_inode_t* inode = (*dir->dir)->buffer->metadata_buffer;
 
     unsigned long long block_size = 1024 << mount->superblock->log_block_size;
 
@@ -597,9 +622,9 @@ struct s_dir_entry* ext2_generic_dir_list(generic_dir_t* dir) {
     return entries;
 }
 
-// ext2_mount(generic_block_t*, generic_filesystem_t*, generic_file_t*) -> char
+// ext2_mount(generic_block_t*, generic_file_t*) -> char
 // Mounts an ext2 file system from a generic block device. Returns 0 on success.
-char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t* root) {
+char ext2_mount(generic_block_t* block, generic_file_t* root) {
     // Get superblock
     ext2fs_superblock_t* superblock = ext2_load_superblock(block);
     if (superblock == (void*) 0)
@@ -629,7 +654,9 @@ char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t
         .superblock = superblock,
         .desc_table = desc_table,
     };
+    generic_filesystem_t* fs = malloc(sizeof(generic_filesystem_t));
     *fs = (generic_filesystem_t) {
+        .rc = 1,
         .mount = mount,
         .unmount = ext2_unmount,
         .read_char = ext2_generic_file_read_char,
@@ -644,18 +671,21 @@ char ext2_mount(generic_block_t* block, generic_filesystem_t* fs, generic_file_t
     ext2fs_load_block(block, superblock, root_inode->block[0], buffer);
 
     // Create directory structure
-    *root = (generic_file_t) {
-        .type = GENERIC_FILE_TYPE_DIR,
-        .fs = fs,
-        .pos = 0,
-        .current_buffer = 0,
-        .buffer_pos = 0,
-        .buffer_indices = { 0, [1 ... BUFFER_COUNT - 1] = -1 },
-        .buffer_block_indices = { 2, root_inode->block[0], 0 },
-        .metadata_buffer = root_inode,
-        .buffers = { buffer, 0 },
-        .written_buffers = { 0 }
-    };
+    root->type = GENERIC_FILE_TYPE_DIR;
+    root->fs = fs;
+    if (root->dir == (void*) 0)
+        root->dir = init_generic_dir();
+
+    generic_file_buffer_t* b = (*root->dir)->buffer;
+    if (b == (void*) 0) {
+        b = malloc(sizeof(generic_file_buffer_t));
+        *b = (generic_file_buffer_t) {
+            .metadata_buffer = root_inode,
+            0
+        };
+        (*root->dir)->buffer = b;
+    }
+
 
     // Success!
     return 0;

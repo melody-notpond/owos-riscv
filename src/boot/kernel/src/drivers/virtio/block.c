@@ -187,7 +187,7 @@ char virtio_block_unpack_write(void* buffer, unsigned long long sector, unsigned
     return -1;
 }
 
-void virtio_block_make_generic(unsigned char block_id, generic_dir_t* dev) {
+void virtio_block_make_generic(unsigned char block_id, generic_file_t* dev) {
     generic_block_t* device = malloc(sizeof(generic_block_t));
     *device = (generic_block_t) {
         .unpack_read = virtio_block_unpack_read,
@@ -196,13 +196,17 @@ void virtio_block_make_generic(unsigned char block_id, generic_dir_t* dev) {
         .metadata = { block_id, 0 }
     };
 
+    generic_file_t* file = malloc(sizeof(generic_file_t));
+    *file = (generic_file_t) {
+        .fs = (void*) 0,
+        .type = GENERIC_FILE_TYPE_BLOCK,
+        .block = device
+    };
+
     char name[] = { 'v', 'i', 'r', 't', '-', 'b', 'l', 'k', '0' + block_id, 0 };
     generic_dir_append_entry(dev, (struct s_dir_entry) {
         .name = strdup(name),
-        .tag = DIR_ENTRY_TYPE_BLOCK,
-        .value = {
-            .block = device
-        }
+        .file = file
     });
 }
 
