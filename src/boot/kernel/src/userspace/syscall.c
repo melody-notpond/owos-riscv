@@ -90,22 +90,82 @@ unsigned long long user_syscall(
 
         // void* mmap(void* addr, unsigned long long length, int prot, int flags, int fd, unsigned long long offset);
         case 9: {
-            void* addr = (void*) a0;
+            // void* addr = (void*) a0;
             unsigned long long length = a1;
             int prot = (int) a2;
-            int flags = (int) a3;
-            int fd = (int) a4;
-            unsigned long long offset = a5;
-            return -1;
+            // int flags = (int) a3;
+            // int fd = (int) a4;
+            // unsigned long long offset = a5;
+
+#define PROT_READ 1
+#define PROT_WRITE 2
+#define PROT_EXEC 4
+
+            // Write+exec is illegal for security reasons
+            if ((prot & PROT_WRITE) && (prot & PROT_EXEC))
+                return -1;
+
+            unsigned long long page_num = (length + PAGE_SIZE - 1) / PAGE_SIZE;
+            void* alloced = alloc_page(page_num);
+            if (alloced == (void*) 0)
+                return -1;
+
+            short f = 0;
+            process_t* process = fetch_process(pid);
+            if (prot & PROT_READ)
+                f |= MMU_FLAG_READ;
+            if (prot & PROT_WRITE)
+                f |= MMU_FLAG_WRITE;
+            if (prot & PROT_EXEC)
+                f |= MMU_FLAG_EXEC;
+            for (unsigned long long i = 0; i < page_num; i++) {
+                mmu_protect(process->mmu_data, alloced + i * PAGE_SIZE, MMU_FLAG_USER | MMU_FLAG_ALLOCED | f, 1);
+            }
+
+            return (unsigned long long) alloced;
         }
 
         // int mprotect(void* addr, unsigned long long length, int prot);
-        case 10:
-            return -1;
+        case 10: {
+            if (a0 & 0xfff)
+                return -1;
+
+            void* addr = (void*) a0;
+            unsigned long long size = a1;
+            int prot = (int) a2;
+
+            if ((prot & PROT_WRITE) && (prot & PROT_EXEC))
+                return -1;
+
+            unsigned long long page_num = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+            short f = 0;
+            process_t* process = fetch_process(pid);
+            if (prot & PROT_READ)
+                f |= MMU_FLAG_READ;
+            if (prot & PROT_WRITE)
+                f |= MMU_FLAG_WRITE;
+            if (prot & PROT_EXEC)
+                f |= MMU_FLAG_EXEC;
+            for (unsigned long long i = 0; i < page_num; i++) {
+                int r = mmu_protect(process->mmu_data, addr + i * PAGE_SIZE, MMU_FLAG_USER | MMU_FLAG_ALLOCED | f, 1);
+                if (r != 0)
+                    return -1;
+            }
+            return 0;
+        }
 
         // int munmap(void* addr, unsigned long long length);
-        case 11:
-            return -1;
+        case 11: {
+            void* addr = (void*) a0;
+            unsigned long long size = a1;
+
+            unsigned long long page_num = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+            process_t* process = fetch_process(pid);
+            for (unsigned long long i = 0; i < page_num; i++) {
+                unmap_mmu(process->mmu_data, addr);
+            }
+            return 0;
+        }
 
         // pid_t getpid(void);
         case 39:

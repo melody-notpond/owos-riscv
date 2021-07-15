@@ -17,5 +17,11 @@ int main(int argc, char** argv) {
     syscall_wrapper(3, fd, 0, 0, 0, 0, 0);
     syscall_wrapper(1, 1, (unsigned long long) buffer, 100, 0, 0, 0);
 
+    for (int i = 0; i < 10000; i++) {
+        void* addr = (void*) syscall_wrapper(9, 0, 69, 3, 0, 0, 0);
+        syscall_wrapper(11, (unsigned long long) addr, 69, 3, 0, 0, 0);
+    }
+    syscall_wrapper(1, 1, (unsigned long long) buffer, 100, 0, 0, 0);
+
     syscall_wrapper(60, 0, 0, 0, 0, 0, 0);
 }

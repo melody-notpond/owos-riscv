@@ -7,14 +7,15 @@
 #define MMU_PAGE_SIZE 4096
 
 // Flags
-#define MMU_FLAG_VALID      0b00000001
-#define MMU_FLAG_READ       0b00000010
-#define MMU_FLAG_WRITE      0b00000100
-#define MMU_FLAG_EXEC       0b00001000
-#define MMU_FLAG_USER       0b00010000
-#define MMU_FLAG_GLOBAL     0b00100000
-#define MMU_FLAG_ACCESSED   0b01000000
-#define MMU_FLAG_DIRTY      0b10000000
+#define MMU_FLAG_VALID      0b000000001
+#define MMU_FLAG_READ       0b000000010
+#define MMU_FLAG_WRITE      0b000000100
+#define MMU_FLAG_EXEC       0b000001000
+#define MMU_FLAG_USER       0b000010000
+#define MMU_FLAG_GLOBAL     0b000100000
+#define MMU_FLAG_ACCESSED   0b001000000
+#define MMU_FLAG_DIRTY      0b010000000
+#define MMU_FLAG_ALLOCED    0b100000000
 
 typedef void* mmu_level_4_t;
 
@@ -68,6 +69,10 @@ void copy_mmu_globals(mmu_level_1_t* dest, mmu_level_1_t* src);
 // make_all_global(mmu_level_1_t*) -> void
 // Makes all entries of the page table (except for meta entries) global.
 void make_all_global(mmu_level_1_t* kernel_mapping);
+
+// mmu_protect(mmu_level_1_t*, void*, short, int) -> int
+// Changes the protection levels on the mmu page. Be careful when setting change_alloc to true.
+int mmu_protect(mmu_level_1_t* top, void* virtual_, short flags, int change_alloc);
 
 // unmap_mmu(mmu_level_1_t*, void*) -> void
 // Unmaps a page from the MMU structure.

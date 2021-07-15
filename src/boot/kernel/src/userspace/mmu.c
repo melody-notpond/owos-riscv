@@ -9,6 +9,9 @@ mmu_level_1_t* create_mmu_top() {
 }
 
 mmu_level_3_t* walk_mmu_and_get_pointer_to_pointer(mmu_level_1_t* top, void* virtual, int create_pages) {
+    if (top == (void*) 0)
+        return (void*) 0;
+
     // Top to level 2
     unsigned long long i = (((unsigned long long) virtual) >> 30) & 0x1ff;
     if (top[i].addr == (void*) 0) {
@@ -264,35 +267,42 @@ void make_all_global(mmu_level_1_t* kernel_mapping) {
     }
 }
 
+// mmu_protect(mmu_level_1_t*, void*, short, int) -> int
+// Changes the protection levels on the mmu page. Be careful when setting change_alloc to true.
+int mmu_protect(mmu_level_1_t* top, void* virtual, short flags, int change_alloc) {
+    virtual = (void*) (((unsigned long long) virtual) & ~0xfff);
+    mmu_level_3_t* physical = walk_mmu_and_get_pointer_to_pointer(top, virtual, 0);
+    if (physical == (void*) 0)
+        return -1;
+
+    if (change_alloc) {
+        physical->raw &= ~0x3ff;
+        physical->raw |= flags & 0x3ff | MMU_FLAG_VALID;
+    } else {
+        physical->raw &= ~0xff;
+        physical->raw |= flags & 0xff | MMU_FLAG_VALID;
+    }
+
+    return 0;
+}
+
 // unmap_mmu(mmu_level_1_t*, void*) -> void
 // Unmaps a page from the MMU structure.
 void unmap_mmu(mmu_level_1_t* top, void* virtual) {
     // Align address to the largest 4096 byte boundary less than the address
     virtual = (void*) (((unsigned long long) virtual) & ~0xfff);
 
-    // Level 1 to level 2
-    unsigned long long i = (((unsigned long long) virtual) & 0x7fb0000000) >> 30;
-    if (top[i].addr == (void*) 0) {
+    // Get
+    mmu_level_3_t* physical = walk_mmu_and_get_pointer_to_pointer(top, virtual, 0);
+    if (physical == (void*) 0)
         return;
-    }
-
-    // Level 2 to level 3
-    mmu_level_2_t* level2 = MMU_UNWRAP(2, top[i]);
-    unsigned long long j = (((unsigned long long) level2) & 0x003fe00000) >> 21;
-    if (level2[j].addr == (void*) 0) {
-        return;
-    }
-
-    // Get index
-    mmu_level_3_t* level3 = MMU_UNWRAP(3, level2[j]);
-    unsigned long long k = (((unsigned long long) level2) & 0x00001ff000) >> 12;
 
     // Deallocate if allocated
-    if (level3[k].raw & 0x100)
-        dealloc_page(MMU_UNWRAP(4, level3[k]));
+    if (physical->raw & 0x100)
+        dealloc_page(MMU_UNWRAP(4, *physical));
 
     // Unmap
-    level3[k].addr = 0;
+    physical->raw = 0;
 }
 
 // clean_mmu_mappings(mmu_level_1_t*, char) -> void
