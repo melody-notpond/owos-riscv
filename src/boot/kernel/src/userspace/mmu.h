@@ -42,9 +42,9 @@ mmu_level_1_t* create_mmu_top();
 // Walks an mmu page table and allocates the missing entries on the way to the address that would be mapped to the virtual address given without allocating an address to the virtual address.
 void premap_mmu(mmu_level_1_t* top, void* _virtual);
 
-// map_mmu(mmu_level_1_t*, void*, void*, char) -> void
+// map_mmu(mmu_level_1_t*, void*, void*, char) -> int
 // Maps a virtual address to a physical address.
-void map_mmu(mmu_level_1_t* top, void* virtual_, void* physical, char flags);
+int map_mmu(mmu_level_1_t* top, void* virtual_, void* physical, char flags);
 
 // alloc_page_mmu(mmu_level_1_t*, void*, char) -> void*
 // Allocates a new page to map to a given virtual address. Returns the physical address

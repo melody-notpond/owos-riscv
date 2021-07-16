@@ -1,6 +1,8 @@
 *.o
 *.iso
 build/
+target/
+Cargo.lock
 obj/
 mnt/
 tags

@@ -1,5 +1,4 @@
 #include "mmu.h"
-#include "../drivers/console/console.h"
 
 // create_mmu_top() -> mmu_level_1_t*
 // Creates an MMU data structure.
@@ -58,9 +57,9 @@ mmu_level_3_t walk_mmu(mmu_level_1_t* top, void* virtual) {
     return *physical_ptr;
 }
 
-// map_mmu(mmu_level_1_t*, void*, void*, char) -> void
+// map_mmu(mmu_level_1_t*, void*, void*, char) -> int
 // Maps a virtual address to a physical address.
-void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
+int map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
     // Align addresses to the largest 4096 byte boundary less than the address
     physical = (void*) (((unsigned long long) physical) & ~0xfff);
     virtual = (void*) (((unsigned long long) virtual) & ~0xfff);
@@ -69,11 +68,9 @@ void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
     mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1);
 
     if (level3 == (void*) 0) {
-        console_printf("[map_mmu] Error mapping virtual address %p to physical address %p!\n", virtual, physical);
-        return;
+        return -1;
     } else if (level3->addr != (void*) 0) {
-        console_printf("[map_mmu] Warning: %p is already mapped to %p; not remapping to %p.\n", virtual, MMU_UNWRAP(4, *level3), physical);
-        return;
+        return -1;
     }
 
     level3->raw = ((unsigned long long) physical) >> 2;
@@ -82,6 +79,7 @@ void map_mmu(mmu_level_1_t* top, void* virtual, void* physical, char flags) {
     // In our case, the 8th bit is used to keep track of whether the memory location was allocated with alloc_page().
     level3->raw &= ~0x100;
     level3->raw |= (0b00111111 & flags) | MMU_FLAG_VALID;
+    return 0;
 }
 
 // alloc_page_mmu(mmu_level_1_t*, void*, char) -> void*
@@ -94,11 +92,9 @@ void* alloc_page_mmu(mmu_level_1_t* top, void* virtual, char flags) {
     mmu_level_3_t* level3 = walk_mmu_and_get_pointer_to_pointer(top, virtual, 1);
 
     if (level3 == (void*) 0) {
-        console_printf("[alloc_page_mmu] Error allocating a page for virtual address %p!\n", virtual);
         return (void*) 0;
     } else if (level3->addr != (void*) 0) {
         void* physical = MMU_UNWRAP(4, *level3);
-        console_printf("[alloc_page_mmu] Warning: %p is already mapped to %p; not remapping to a fresh page.\n", virtual, physical);
         return physical;
     }
 

@@ -1,6 +1,13 @@
 CODE=src/
 EMU=qemu-system-riscv64
 EFLAGS=-machine virt -cpu rv64 -bios opensbi-riscv64-generic-fw_dynamic.bin -m 256m -nographic -device virtio-blk-device,scsi=off,drive=foo -global virtio-mmio.force-legacy=false -device virtio-gpu-device -s #-S
+RUSTBUILD=debug
+RUSTFLAGSPRE=
+ifeq ($(RUSTBUILD), release)
+	RUSTFLAGS=--release $(RUSTFLAGSPRE)
+else
+	RUSTFLAGS=$(RUSTFLAGSPRE)
+endif
 
 all: kernel
 
@@ -24,13 +31,17 @@ kernel: dirs
 etc: dirs
 	echo -e "/dev/virt-blk7\t/\text2\trw" > build/root/etc/fstab
 
-bin: simple
+bin: simple lil
 
 sbin: init
 
 simple: dirs
 	cd $(CODE)root/bin/simple && $(MAKE)
-	mv $(CODE)root/bin/simple/simple build/root/bin/
+	mv $(CODE)root/bin/simple/simple build/root/bin
+
+lil: dirs
+	cd $(CODE)root/bin/lil && cargo +nightly build $(RUSTFLAGS)
+	cp $(CODE)root/bin/lil/target/riscv64gc-unknown-none-elf/$(RUSTBUILD)/lil build/root/bin
 
 init: dirs
 	cd $(CODE)root/sbin/init && $(MAKE)
