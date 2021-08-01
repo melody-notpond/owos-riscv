@@ -19,7 +19,10 @@ lib: $(CODE)lib/*.c
 userspace: $(CODE)userspace/*.c
 	$(CC) $(CFLAGS) -c $?
 
-drivers: drivers/filesystems drivers/console drivers/virtio
+drivers: drivers/filesystems drivers/console drivers/devicetree drivers/virtio
+
+drivers/devicetree: $(CODE)drivers/devicetree/*.c
+	$(CC) $(CFLAGS) -c $?
 
 drivers/filesystems: $(CODE)drivers/filesystems/*.c
 	$(CC) $(CFLAGS) -c $?

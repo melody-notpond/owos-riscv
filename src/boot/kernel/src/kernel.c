@@ -2,6 +2,7 @@
 #include "drivers/filesystems/generic_file.h"
 #include "drivers/generic_block.h"
 #include "drivers/console/console.h"
+#include "drivers/devicetree/tree.h"
 #include "drivers/virtio/block.h"
 #include "drivers/virtio/virtio.h"
 #include "interrupts.h"
@@ -18,7 +19,8 @@ generic_file_t* root;
 trap_t trap_structs[32];
 
 void kinit(unsigned long long hartid, void* fdt) {
-    console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, fdt);
+    fdt_header_t* fdt_header = verify_fdt(fdt);
+    console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, fdt_header);
 
     // Init console file system
     console_fs = (generic_filesystem_t) {

@@ -58,9 +58,6 @@ finish:
 
 
 .section .rodata
-hart_init_message:
-    .string "Initialised hart 0x%llx\n"
-
 welcome_msg0:
     .string "                 _____ ___   \n"
 welcome_msg1:
