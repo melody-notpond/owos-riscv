@@ -135,6 +135,10 @@ void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt) {
     extern int pages_bottom;
     extern void* pages_start;
 
+    // Map fdt
+    mmu_map_range_identity(top, fdt, ((void*) fdt) + be_to_le(32, fdt->totalsize), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mark_pages_as_used(fdt, be_to_le(32, fdt->totalsize));
+
     // Map kernel
     mmu_map_range_identity(top, &text_start, &data_start,       MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_EXEC);
     mmu_map_range_identity(top, &data_start, &ro_data_start,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
@@ -143,10 +147,6 @@ void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt) {
     mmu_map_range_identity(top, &stack_start, &heap_bottom,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &heap_bottom, &pages_bottom,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &pages_bottom, pages_start,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
-
-    // Map fdt
-    mmu_map_range_identity(top, fdt, ((void*) fdt) + be_to_le(32, fdt->totalsize), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mark_pages_as_used(fdt, be_to_le(32, fdt->totalsize));
 
     // Map virtio stuff
     mmu_map_range_identity(top, (void*) VIRTIO_MMIO_BASE, (void*) (VIRTIO_MMIO_TOP + VIRTIO_MMIO_INTERVAL), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);

@@ -3,7 +3,7 @@
 #include "../drivers/console/console.h"
 
 // TODO: figure out how to make this dependent on how much memory is detected
-#define HEAP_SIZE 0x1000
+#define HEAP_SIZE 0x100000
 
 // Header for malloc allocations.
 struct s_malloc_pointer_header {
