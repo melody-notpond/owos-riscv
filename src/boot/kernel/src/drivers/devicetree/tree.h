@@ -3,7 +3,7 @@
 
 typedef unsigned char be32_t[4];
 
-typedef struct fdt_header {
+typedef struct __attribute__((packed)) {
     be32_t magic;
     be32_t totalsize;
     be32_t off_dt_struct;
@@ -14,7 +14,7 @@ typedef struct fdt_header {
     be32_t boot_cpuid_phys;
     be32_t size_dt_strings;
     be32_t size_dt_struct;
-} __attribute__((packed, aligned(1))) fdt_header_t;
+} fdt_header_t;
 
 // be_to_le(unsigned long long, unsigned char*) -> unsigned long long
 // Converts a big endian number into a little endian number.

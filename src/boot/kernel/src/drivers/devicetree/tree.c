@@ -7,7 +7,7 @@ unsigned long long be_to_le(unsigned long long size, unsigned char* be) {
     unsigned long long result = 0;
 
     for (unsigned long long i = 0; i < byte_count; i++) {
-        result |= be[i] << ((byte_count - i - 1) * 8);
+        result |= ((unsigned long long) be[i]) << ((byte_count - i - 1) * 8);
     }
 
     return result;
@@ -18,7 +18,6 @@ unsigned long long be_to_le(unsigned long long size, unsigned char* be) {
 fdt_header_t* verify_fdt(void* fdt) {
     fdt_header_t* header = fdt;
     unsigned long long magic = be_to_le(32, header->magic);
-    console_printf("magic: %llx\n", magic);
     if (be_to_le(32, header->magic) == 0xd00dfeed)
         return header;
     return (void*) 0;

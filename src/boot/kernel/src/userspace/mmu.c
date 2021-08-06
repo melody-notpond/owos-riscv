@@ -123,9 +123,9 @@ void mmu_map_range_identity(mmu_level_1_t* top, void* start, void* end, char fla
 #include "../drivers/virtio/virtio.h"
 #include "../interrupts.h"
 
-// mmu_map_kernel(mmu_level_1_t*) -> void
+// mmu_map_kernel(mmu_level_1_t*, fdt_header_t*) -> void
 // Maps the kernel onto an mmu page table.
-void mmu_map_kernel(mmu_level_1_t* top) {
+void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt) {
     extern int text_start;
     extern int data_start;
     extern int ro_data_start;
@@ -143,6 +143,10 @@ void mmu_map_kernel(mmu_level_1_t* top) {
     mmu_map_range_identity(top, &stack_start, &heap_bottom,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &heap_bottom, &pages_bottom,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &pages_bottom, pages_start,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+
+    // Map fdt
+    mmu_map_range_identity(top, fdt, ((void*) fdt) + be_to_le(32, fdt->totalsize), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mark_pages_as_used(fdt, be_to_le(32, fdt->totalsize));
 
     // Map virtio stuff
     mmu_map_range_identity(top, (void*) VIRTIO_MMIO_BASE, (void*) (VIRTIO_MMIO_TOP + VIRTIO_MMIO_INTERVAL), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);

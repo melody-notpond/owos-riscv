@@ -1,6 +1,7 @@
 #ifndef KERNEL_MMU_H
 #define KERNEL_MMU_H
 
+#include "../drivers/devicetree/tree.h"
 #include "../lib/memory.h"
 
 #define MMU_UNWRAP(t, a) ((mmu_level_##t##_t*) ((((a).raw) & ~0x3ff) << 2))
@@ -58,9 +59,9 @@ mmu_level_3_t walk_mmu(mmu_level_1_t* top, void* _virtual);
 // Maps a range onto itself in an mmu page table.
 void mmu_map_range_identity(mmu_level_1_t* top, void* start, void* end, char flags);
 
-// mmu_map_kernel(mmu_level_1_t*) -> void
+// mmu_map_kernel(mmu_level_1_t*, fdt_header_t*) -> void
 // Maps the kernel onto an mmu page table.
-void mmu_map_kernel(mmu_level_1_t* top);
+void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt);
 
 // copy_mmu_globals(mmu_level_1_t*, mmu_level_1_t*) -> void
 // Copies the global mappings from one page table to another.

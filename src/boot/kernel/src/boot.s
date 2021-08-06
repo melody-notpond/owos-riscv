@@ -9,8 +9,10 @@ _start:
     la sp, stack_top
     mv fp, sp
 
-    # Save hart id
-    mv t6, a0
+    # Save arguments
+    addi sp, sp, -16
+    sd a0, 8(sp)
+    sd a1, 0(sp)
 
     # Print out welcome message
     la a0, welcome_msg0
@@ -31,9 +33,11 @@ _start:
     csrw stvec, t0
 
     # Set up mmu
+    ld a0, 0(sp)
     jal init_heap_metadata
     jal create_mmu_top
     csrw sscratch, a0
+    ld a1, 0(sp)
     jal mmu_map_kernel
     csrr a0, sscratch
 
@@ -50,7 +54,11 @@ _start:
     la ra, kmain
     li a0, 0x40122
     csrs sstatus, a0
-    mv a0, t6
+
+    # Load arguments
+    ld a1, 0(sp)
+    ld a0, 8(sp)
+    addi sp, sp, 16
     sret
 
 finish:

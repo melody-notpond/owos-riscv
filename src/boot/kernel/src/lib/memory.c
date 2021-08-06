@@ -3,7 +3,7 @@
 #include "../drivers/console/console.h"
 
 // TODO: figure out how to make this dependent on how much memory is detected
-#define HEAP_SIZE 0x100000
+#define HEAP_SIZE 0x1000
 
 // Header for malloc allocations.
 struct s_malloc_pointer_header {
@@ -28,9 +28,9 @@ enum {
     PAGE_ALLOC_BYTE_LAST = 2,
 };
 
-// init_heap_metadata(void) -> void
+// init_heap_metadata(void*) -> void
 // Initialised the heap by allocating space for page metadata.
-void init_heap_metadata() {
+void init_heap_metadata(void* fdt) {
     unsigned long long page_count = (HEAP_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
     pages_start += page_count;
     volatile unsigned long long* ptr = (unsigned long long*) &heap_bottom;
@@ -59,6 +59,23 @@ char is_used(page_t* ptr) {
 char is_last(page_t* ptr) {
     char* cp = ((char*) &pages_bottom) + (((unsigned long long) ptr) - (unsigned long long) pages_start) / PAGE_SIZE;
     return (*cp & PAGE_ALLOC_BYTE_LAST) != 0;
+}
+
+static void mark_pages_as_used_unchecked(void* ptr, unsigned long long page_count) {
+    char* cp = ((char*) &pages_bottom) + (((char*) ptr) - (char*) pages_start) / PAGE_SIZE;
+    char* end = cp + page_count;
+    for (; cp < end; cp++) {
+        *cp = PAGE_ALLOC_BYTE_USED;
+    }
+    *(cp - 1) |= PAGE_ALLOC_BYTE_LAST;
+}
+
+// mark_pages_as_used(void*, unsigned long long) -> void
+// Marks the given pages as used.
+void mark_pages_as_used(void* ptr, unsigned long long page_count) {
+    ptr = (void*) ((unsigned long long) ptr & ~(PAGE_SIZE - 1));
+    page_count = (page_count + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
+    mark_pages_as_used_unchecked(ptr, page_count);
 }
 
 // alloc_page(unsigned long long) -> void*
@@ -121,12 +138,7 @@ void* alloc_page(unsigned long long page_count) {
                 }
 
                 // Mark pages as used
-                char* cp = ((char*) &pages_bottom) + (((char*) ptr) - (char*) pages_start) / PAGE_SIZE;
-                char* end = cp + page_count;
-                for (; cp < end; cp++) {
-                    *cp = PAGE_ALLOC_BYTE_USED;
-                }
-                *(cp - 1) |= PAGE_ALLOC_BYTE_LAST;
+                mark_pages_as_used_unchecked(ptr, page_count);
 
                 return (void*) ptr;
             }

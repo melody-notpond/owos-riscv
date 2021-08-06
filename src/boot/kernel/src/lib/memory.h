@@ -3,9 +3,13 @@
 
 #define PAGE_SIZE 4096
 
-// init_heap_metadata(void) -> void
+// init_heap_metadata(void*) -> void
 // Initialised the heap by allocating space for page metadata.
-void init_heap_metadata();
+void init_heap_metadata(void* fdt);
+
+// mark_pages_as_used(void*, unsigned long long) -> void
+// Marks the given pages as used.
+void mark_pages_as_used(void* ptr, unsigned long long page_count);
 
 // alloc_page(unsigned long long) -> void*
 // Returns a zeroed out pointer to consecutive pages in memory.
