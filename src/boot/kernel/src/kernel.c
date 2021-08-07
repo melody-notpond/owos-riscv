@@ -19,8 +19,9 @@ generic_file_t* root;
 trap_t trap_structs[32];
 
 void kinit(unsigned long long hartid, void* fdt) {
-    fdt_header_t* fdt_header = verify_fdt(fdt);
-    console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, fdt_header);
+    fdt_t devicetree = verify_fdt(fdt);
+    console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, devicetree.header);
+    dump_fdt(&devicetree);
 
     // Init console file system
     console_fs = (generic_filesystem_t) {

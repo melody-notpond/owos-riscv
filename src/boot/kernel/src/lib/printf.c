@@ -90,7 +90,7 @@ void func_vprintf(void (*write)(char), char* format, va_list va) {
 
                     char writing = 0;
                     for (unsigned long long i = 15 * 4; i; i -= 4) {
-                        unsigned long long c = (x & (0xf << i)) >> i;
+                        unsigned long long c = ((x & (0xf << i)) >> i) & 0xf;
                         writing = writing || c != 0;
                         if (writing)
                             write("0123456789abcdef"[c]);
