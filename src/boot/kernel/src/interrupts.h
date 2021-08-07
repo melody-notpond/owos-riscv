@@ -3,14 +3,14 @@
 
 #include "userspace/process.h"
 
-// TODO: Detect base address using device trees
-#define PLIC_BASE               0x0c000000
 #define PLIC_PRIORITY_OFFSET    0x00000004
 #define PLIC_PENDING_OFFSET     0x00001000
 #define PLIC_ENABLES_OFFSET     0x00002000
 #define PLIC_THRESHOLD_OFFSET   0x00200000
 #define PLIC_CLAIM_OFFSET       0x00200004
 #define PLIC_COUNT                    1023
+
+extern unsigned long long PLIC_BASE;
 
 // Converts a hartid and supervisor/user mode pair into a context for the PLIC.
 #define PLIC_CONTEXT(hartid, s) ((hartid) * 2 + (s))

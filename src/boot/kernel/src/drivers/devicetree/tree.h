@@ -45,8 +45,16 @@ unsigned long long be_to_le(unsigned long long size, unsigned char* be);
 // Verifies a fdt by checking its magic number.
 fdt_t verify_fdt(void* fdt);
 
-// dump_fdt(fdt_t*) -> void
+// dump_fdt(fdt_t*, void*) -> void
 // Dumps an fdt to the UART.
-void dump_fdt(fdt_t* fdt);
+void dump_fdt(fdt_t* fdt, void*);
+
+// fdt_find(fdt_t*, char*, void*) -> void*
+// Finds a device tree node with the given name. Returns null on failure.
+void* fdt_find(fdt_t* fdt, char* name, void* last);
+
+// fdt_get_node_addr(void*) -> unsigned long long
+// Gets the address after the @ sign in a device tree node.
+unsigned long long fdt_get_node_addr(void* node);
 
 #endif /* DEVICE_TREE_H */

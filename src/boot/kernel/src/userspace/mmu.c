@@ -152,6 +152,9 @@ void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt) {
     mmu_map_range_identity(top, (void*) VIRTIO_MMIO_BASE, (void*) (VIRTIO_MMIO_TOP + VIRTIO_MMIO_INTERVAL), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     // Map interrupt stuff
+    fdt_t devicetree = verify_fdt(fdt);
+    void* plic = fdt_find(&devicetree, "plic", (void*) 0);
+    PLIC_BASE = fdt_get_node_addr(plic);
     mmu_map_range_identity(top, (void*) PLIC_BASE, (void*) (PLIC_BASE + PLIC_COUNT * 4),                                    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, (void*) (PLIC_BASE + PLIC_ENABLES_OFFSET), (void*) (PLIC_BASE + PLIC_ENABLES_OFFSET + 1),   MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, (void*) get_context_priority_threshold(1), (void*) (get_context_priority_threshold(1) + 1), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);

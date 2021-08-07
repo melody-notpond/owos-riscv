@@ -1,4 +1,5 @@
 #include "tree.h"
+#include "../../lib/string.h"
 #include "../console/console.h"
 
 // be_to_le(unsigned long long, unsigned char*) -> unsigned long long
@@ -30,56 +31,57 @@ fdt_t verify_fdt(void* fdt) {
     return (fdt_t) { 0 };
 }
 
-// dump_fdt(fdt_t*) -> void
+// dump_fdt(fdt_t*, void*) -> void
 // Dumps an fdt to the UART.
-void dump_fdt(fdt_t* fdt) {
+void dump_fdt(fdt_t* fdt, void* node) {
     if (fdt->header == (void*) 0) {
         console_puts("Invalid flat device tree\n");
         return;
     }
 
-    console_printf(
-        "Header at %p:\n"
-        "    magic: 0x%llx\n"
-        "    total size: 0x%llx\n"
-        "    structure offset: 0x%llx\n"
-        "    strings offset: 0x%llx\n"
-        "    memory reserved map offset: 0x%llx\n"
-        "    version: 0x%llx\n"
-        "    last compatible version: 0x%llx\n"
-        "    boot cpu id: 0x%llx\n"
-        "    strings size: 0x%llx\n"
-        "    structure size: 0x%llx\n"
-        , fdt->header
-        , be_to_le(32, fdt->header->magic)
-        , be_to_le(32, fdt->header->totalsize)
-        , be_to_le(32, fdt->header->off_dt_struct)
-        , be_to_le(32, fdt->header->off_dt_strings)
-        , be_to_le(32, fdt->header->off_mem_rsvmap)
-        , be_to_le(32, fdt->header->version)
-        , be_to_le(32, fdt->header->last_comp_version)
-        , be_to_le(32, fdt->header->boot_cpuid_phys)
-        , be_to_le(32, fdt->header->size_dt_strings)
-        , be_to_le(32, fdt->header->size_dt_struct)
-    );
+    if (node == (void*) 0) {
+        console_printf(
+            "Header at %p:\n"
+            "    magic: 0x%llx\n"
+            "    total size: 0x%llx\n"
+            "    structure offset: 0x%llx\n"
+            "    strings offset: 0x%llx\n"
+            "    memory reserved map offset: 0x%llx\n"
+            "    version: 0x%llx\n"
+            "    last compatible version: 0x%llx\n"
+            "    boot cpu id: 0x%llx\n"
+            "    strings size: 0x%llx\n"
+            "    structure size: 0x%llx\n"
+            , fdt->header
+            , be_to_le(32, fdt->header->magic)
+            , be_to_le(32, fdt->header->totalsize)
+            , be_to_le(32, fdt->header->off_dt_struct)
+            , be_to_le(32, fdt->header->off_dt_strings)
+            , be_to_le(32, fdt->header->off_mem_rsvmap)
+            , be_to_le(32, fdt->header->version)
+            , be_to_le(32, fdt->header->last_comp_version)
+            , be_to_le(32, fdt->header->boot_cpuid_phys)
+            , be_to_le(32, fdt->header->size_dt_strings)
+            , be_to_le(32, fdt->header->size_dt_struct)
+        );
 
-    struct fdt_reserve_entry* entry = fdt->memory_reservation_block;
-    unsigned long long addr = be_to_le(64, entry->address);
-    unsigned long long size = be_to_le(64, entry->size);
-    console_puts("Memory reserved map:\n");
-    while (addr || size) {
-        console_printf("    reserved %llx-%llx (%llx bytes)\n", addr, addr + size, size);
-        entry++;
-        addr = be_to_le(64, entry->address);
-        size = be_to_le(64, entry->size);
+        struct fdt_reserve_entry* entry = fdt->memory_reservation_block;
+        unsigned long long addr = be_to_le(64, entry->address);
+        unsigned long long size = be_to_le(64, entry->size);
+        console_puts("Memory reserved map:\n");
+        while (addr || size) {
+            console_printf("    reserved %llx-%llx (%llx bytes)\n", addr, addr + size, size);
+            entry++;
+            addr = be_to_le(64, entry->address);
+            size = be_to_le(64, entry->size);
+        }
+        console_puts("End of memory reserved map\nroot:\n");
     }
-    console_puts("End of memory reserved map\n");
 
-    console_puts("Structure:\n");
-    void* ptr = fdt->structure_block;
+    void* ptr = node != (void*) 0 ? node : fdt->structure_block;
     int indent = 0;
-    unsigned long long current;
-    while ((current = be_to_le(32, ptr)) != FDT_END) {
+    unsigned long long current = be_to_le(32, ptr);
+    do {
         switch ((fdt_node_type_t) current) {
             case FDT_BEGIN_NODE: {
                 for (int i = 0; i < indent; i++) {
@@ -89,9 +91,7 @@ void dump_fdt(fdt_t* fdt) {
                 indent += 1;
                 ptr += 4;
                 char* c = ptr;
-                if (indent == 1) {
-                    console_puts("root:\n");
-                } else {
+                if (node || indent != 1) {
                     while (*c) {
                         console_printf("%c", *c++);
                     }
@@ -139,5 +139,119 @@ void dump_fdt(fdt_t* fdt) {
             case FDT_END:
                 break;
         }
+    } while ((current = be_to_le(32, ptr)) != FDT_END && indent > 0);
+}
+
+// fdt_find(fdt_t*, char*, void*) -> void*
+// Finds a device tree node with the given name. Returns null on failure.
+void* fdt_find(fdt_t* fdt, char* name, void* last) {
+    if (last == (void*) 0)
+        last = fdt->structure_block;
+    else {
+        last += 4;
+        char* c = last;
+        while (*c++);
+        last = (void*) ((unsigned long long) (c + 4) & ~0x3);
     }
+
+    unsigned long long current;
+    while ((current = be_to_le(32, last)) != FDT_END) {
+        switch ((fdt_node_type_t) current) {
+            case FDT_BEGIN_NODE: {
+                char* c = last + 4;
+                char* temp_name = name;
+
+                while (*c != '@' && *temp_name) {
+                    if (*c != *temp_name)
+                        break;
+                    c++;
+                    temp_name++;
+                }
+
+                if (*c == '@' && *temp_name == '\0')
+                    return last;
+
+                while (*c++);
+
+                last = (void*) ((unsigned long long) (c + 3) & ~0x3);
+                break;
+            }
+
+            case FDT_END_NODE:
+                last += 4;
+                break;
+
+            case FDT_PROP:
+                last += 4;
+                unsigned int len = be_to_le(32, last);
+                last += 4;
+                unsigned int name_offset = be_to_le(32, last);
+                last += 4;
+                last = (void*) ((unsigned long long) (last + len + 3) & ~0x3);
+                break;
+
+            case FDT_NOP:
+                last += 4;
+                break;
+
+            case FDT_END:
+                break;
+        }
+    }
+
+    return (void*) 0;
+}
+
+// fdt_get_node_addr(void*) -> unsigned long long
+// Gets the address after the @ sign in a device tree node.
+unsigned long long fdt_get_node_addr(void* node) {
+    if (be_to_le(32, node) != FDT_BEGIN_NODE) {
+        return 0;
+    }
+
+    char* c = node + 4;
+    while (*c && *c++ != '@');
+    if (*c == '\0') {
+        return 0;
+    }
+
+    unsigned long long result = 0;
+    while (*c) {
+        result <<= 4;
+        unsigned long long v = (unsigned long long) *c++;
+        switch (v) {
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                v = v - '0';
+                break;
+            case 'a':
+            case 'b':
+            case 'c':
+            case 'd':
+            case 'e':
+            case 'f':
+                v = v - 'a' + 0xa;
+                break;
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+            case 'E':
+            case 'F':
+                v = v - 'A' + 0xA;
+                break;
+        }
+
+        result |= v;
+    }
+
+    return result;
 }

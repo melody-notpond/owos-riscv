@@ -1,6 +1,7 @@
 CODE=src/
 EMU=qemu-system-riscv64
 EFLAGS=-machine virt -cpu rv64 -bios opensbi-riscv64-generic-fw_dynamic.bin -m 256m -nographic -device virtio-blk-device,scsi=off,drive=foo -global virtio-mmio.force-legacy=false -device virtio-gpu-device -s #-S
+KERNELARGS="uwu"
 RUSTBUILD=debug
 RUSTFLAGSPRE=
 ifeq ($(RUSTBUILD), release)
@@ -12,7 +13,7 @@ endif
 all: kernel
 
 run:
-	$(EMU) $(EFLAGS) -kernel build/boot/kernel -drive if=none,format=raw,file=build/drive.iso,id=foo
+	$(EMU) $(EFLAGS) -kernel build/boot/kernel -drive if=none,format=raw,file=build/drive.iso,id=foo -append $(KERNELARGS)
 
 mount: kernel etc bin sbin
 	ls build/drive.iso || dd if=/dev/zero of=build/drive.iso bs=1M count=2048

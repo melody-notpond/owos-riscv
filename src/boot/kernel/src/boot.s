@@ -1,6 +1,5 @@
 .section .text
 .global _start
-.global interrupt_init
 
 # a0 - current hart id
 # a1 - pointer to flattened device tree

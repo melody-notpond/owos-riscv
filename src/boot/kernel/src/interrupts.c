@@ -5,6 +5,8 @@
 
 //#define INTERRUPT_DEBUG
 
+unsigned long long PLIC_BASE = 0;
+
 // Interrupt handlers
 void (*mei_interrupt_handlers[PLIC_COUNT])(unsigned int) = { 0 };
 
@@ -92,11 +94,6 @@ void swap_process(trap_t* trap) {
 // handle_interrupt(unsigned long long, unsigned long long, struct s_trap, pid_t) -> trap_t*
 // Called by the interrupt handler to dispatch the interrupt. Returns the trap structure to jump back to.
 trap_t* handle_interrupt(unsigned long long scause, trap_t* trap) {
-    // Debug stuff
-#ifdef INTERRUPT_DEBUG
-    console_printf("Interrupt received: 0x%llx\n", scause);
-#endif
-
     // Asynchronous interrupts
     if (scause &  0x8000000000000000) {
         scause &= 0x7fffffffffffffff;

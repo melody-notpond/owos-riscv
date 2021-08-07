@@ -21,7 +21,7 @@ trap_t trap_structs[32];
 void kinit(unsigned long long hartid, void* fdt) {
     fdt_t devicetree = verify_fdt(fdt);
     console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, devicetree.header);
-    dump_fdt(&devicetree);
+    dump_fdt(&devicetree, (void*) 0);
 
     // Init console file system
     console_fs = (generic_filesystem_t) {
@@ -82,10 +82,6 @@ void kinit(unsigned long long hartid, void* fdt) {
     // Set priority threshold
     volatile unsigned int* threshold = get_context_priority_threshold(PLIC_CONTEXT(hartid, 1));
     *threshold = 0;
-
-    // Set next time interrupt
-    unsigned long long time = 0;
-    asm volatile("csrr %0, time" : "=r" (time));
 
     // Enable interrupts in the hart
     unsigned long long t = 0x202;
