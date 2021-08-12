@@ -103,12 +103,12 @@ unsigned long long user_syscall(
 
             // Write+exec is illegal for security reasons
             if ((prot & PROT_WRITE) && (prot & PROT_EXEC))
-                return -1;
+                return 0;
 
             unsigned long long page_num = (length + PAGE_SIZE - 1) / PAGE_SIZE;
             void* alloced = alloc_page(page_num);
             if (alloced == (void*) 0)
-                return -1;
+                return 0;
 
             short f = 0;
             process_t* process = fetch_process(pid);
@@ -171,11 +171,10 @@ unsigned long long user_syscall(
         case 39:
             return pid;
 
-        // void exit(void* returned, unsigned long long length);
+        // void exit(unsigned long long status);
         case 60: {
             // TODO: use this value
-            void* returned = (void*) a0;
-            unsigned long long length = a1;
+            unsigned long long status = a0;
 
             kill_process(pid);
             sbi_set_timer(0);

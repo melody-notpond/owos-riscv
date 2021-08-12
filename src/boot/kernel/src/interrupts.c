@@ -139,7 +139,10 @@ trap_t* handle_interrupt(unsigned long long scause, trap_t* trap) {
 
             default:
                 console_printf("unknown synchronous interrupt: 0x%llx\n", scause);
+//#define INTERRUPT_DEBUG_NO_HALT
+#ifndef INTERRUPT_DEBUG_NO_HALT
                 while (1);
+#endif /* INTERRUPT_DEBUG_NO_HALT */
         }
     }
 

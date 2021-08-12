@@ -153,6 +153,9 @@ void* alloc_page(unsigned long long page_count) {
 // dealloc_page(void*) -> void
 // Deallocates a pointer allocated by alloc.
 void dealloc_page(void* ptr) {
+    if (ptr == (void*) 0)
+        return;
+
     page_t* page_ptr = (page_t*) ptr;
     char* cp = ((char*) &pages_bottom) + (((char*) page_ptr) - (char*) pages_start) / PAGE_SIZE;
 
@@ -199,8 +202,11 @@ void* malloc(unsigned long int n) {
     }
 
     // Error message on out of memory
-    if (ptr + size >= (struct s_malloc_pointer_header*) &pages_bottom)
-        console_printf("[malloc] Out of memory! Attempted to load address 0x%p with size 0x%llx!\n", ptr, size);
+    if (ptr + size >= (struct s_malloc_pointer_header*) &pages_bottom) {
+        unsigned long long ra;
+        asm("mv %0, ra" : "=r"(ra));
+        console_printf("[malloc] Out of memory! Attempted to load address 0x%p with size 0x%llx!\nCalled from 0x%llx\n", ptr, size, ra);
+    }
     return (void*) 0;
 }
 
