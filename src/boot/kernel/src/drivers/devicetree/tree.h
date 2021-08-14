@@ -37,9 +37,15 @@ typedef struct {
     char* strings_block;
 } fdt_t;
 
-// be_to_le(unsigned long long, unsigned char*) -> unsigned long long
+struct fdt_property {
+    unsigned int len;
+    char* key;
+    char* data;
+};
+
+// be_to_le(unsigned long long, void*) -> unsigned long long
 // Converts a big endian number into a little endian number.
-unsigned long long be_to_le(unsigned long long size, unsigned char* be);
+unsigned long long be_to_le(unsigned long long size, void* be);
 
 // verify_fdt(void*) -> fdt_t
 // Verifies a fdt by checking its magic number.
@@ -56,5 +62,9 @@ void* fdt_find(fdt_t* fdt, char* name, void* last);
 // fdt_get_node_addr(void*) -> unsigned long long
 // Gets the address after the @ sign in a device tree node.
 unsigned long long fdt_get_node_addr(void* node);
+
+// fdt_get_property(fdt_t*, void*, char*) -> struct fdt_property
+// Gets a property from a device tree node.
+struct fdt_property fdt_get_property(fdt_t* fdt, void* node, char* key);
 
 #endif /* DEVICE_TREE_H */

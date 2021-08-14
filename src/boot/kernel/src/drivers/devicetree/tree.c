@@ -2,14 +2,15 @@
 #include "../../lib/string.h"
 #include "../console/console.h"
 
-// be_to_le(unsigned long long, unsigned char*) -> unsigned long long
+// be_to_le(unsigned long long, void*) -> unsigned long long
 // Converts a big endian number into a little endian number.
-unsigned long long be_to_le(unsigned long long size, unsigned char* be) {
+unsigned long long be_to_le(unsigned long long size, void* be) {
+    unsigned char* be_char = be;
     unsigned long long byte_count = size / 8;
     unsigned long long result = 0;
 
     for (unsigned long long i = 0; i < byte_count; i++) {
-        result |= ((unsigned long long) be[i]) << ((byte_count - i - 1) * 8);
+        result |= ((unsigned long long) be_char[i]) << ((byte_count - i - 1) * 8);
     }
 
     return result;
@@ -121,12 +122,12 @@ void dump_fdt(fdt_t* fdt, void* node) {
                 console_printf("property %s = ", fdt->strings_block + name_offset);
 
                 if (*((char*) ptr) == 0) {
-                    console_printf("0x%llx\n", be_to_le(len * 8, ptr));
+                    console_printf("0x%llx (0x%x bytes)\n", be_to_le(len * 8, ptr), len);
                 } else {
                     for (unsigned int i = 0; i < len; i++) {
                         console_printf("%c", ((char*) ptr)[i]);
                     }
-                    console_puts("\n");
+                    console_printf(" (0x%x bytes)\n", len);
                 }
 
                 ptr = (void*) ((unsigned long long) (ptr + len + 3) & ~0x3);
@@ -255,3 +256,66 @@ unsigned long long fdt_get_node_addr(void* node) {
 
     return result;
 }
+
+// fdt_get_property(fdt_t*, void*, char*) -> struct fdt_property
+// Gets a property from a device tree node.
+struct fdt_property fdt_get_property(fdt_t* fdt, void* node, char* key) {
+    if (node == (void*) 0) {
+        node = fdt->structure_block;
+    }
+
+    if (be_to_le(32, node) != FDT_BEGIN_NODE) {
+        return (struct fdt_property) { 0 };
+    }
+
+    unsigned long long depth = 0;
+    unsigned long long current;
+    while ((current = be_to_le(32, node)) != FDT_END) {
+        switch ((fdt_node_type_t) current) {
+            case FDT_BEGIN_NODE: {
+                depth++;
+                char* c = node + 4;
+
+                while (*c++);
+
+                node = (void*) ((unsigned long long) (c + 3) & ~0x3);
+                break;
+            }
+
+            case FDT_END_NODE:
+                depth--;
+                if (depth == 0)
+                    return (struct fdt_property) { 0 };
+                node += 4;
+                break;
+
+            case FDT_PROP:
+                node += 4;
+                unsigned int len = be_to_le(32, node);
+                node += 4;
+                unsigned int name_offset = be_to_le(32, node);
+                node += 4;
+
+                if (depth == 1 && !strcmp(fdt->strings_block + name_offset, key)) {
+                    return (struct fdt_property) {
+                        .len = len,
+                        .key = fdt->strings_block + name_offset,
+                        .data = node
+                    };
+                }
+
+                node = (void*) ((unsigned long long) (node + len + 3) & ~0x3);
+                break;
+
+            case FDT_NOP:
+                node += 4;
+                break;
+
+            case FDT_END:
+                break;
+        }
+    }
+
+    return (struct fdt_property) { 0 };
+}
+

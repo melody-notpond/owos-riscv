@@ -324,7 +324,7 @@ void clean_mmu_mappings(mmu_level_1_t* top, char force) {
             if (level3 == (void*) 0)
                 continue;
 
-            for (int k = 0; k < (int) (PAGE_SIZE / sizeof(void*)); k++) {
+            for (int k = 0; k < PAGE_SIZE / sizeof(void*); k++) {
                 if ((level3[k].raw & 0x100) && (force || !(level3[k].raw & MMU_FLAG_GLOBAL)))
                     dealloc_page(MMU_UNWRAP(4, level3[k]));
             }

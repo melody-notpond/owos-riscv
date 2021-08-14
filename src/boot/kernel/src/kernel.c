@@ -156,10 +156,10 @@ void kmain() {
 
     // Load the new page table and clean up the old page table
     process_init_kernel_mmu(initd);
+    clean_mmu_mappings(top, 0);
     mmu_level_1_t* new_top = initd_process->mmu_data;
     mmu = 0x8000000000000000 | (((unsigned long long) new_top) >> 12);
     asm volatile("csrw satp, %0" : "=r" (mmu));
-    clean_mmu_mappings(top, 0);
     asm volatile("sfence.vma");
 
     // Queue init process

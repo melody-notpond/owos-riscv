@@ -13,7 +13,7 @@ void mark_pages_as_used(void* ptr, unsigned long long page_count);
 
 // alloc_page(unsigned long long) -> void*
 // Returns a zeroed out pointer to consecutive pages in memory.
-void* alloc_page(unsigned long long page_count);
+void* alloc_page(unsigned long long size);
 
 // dealloc_page(void*) -> void
 // Deallocates a pointer allocated by alloc.

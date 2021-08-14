@@ -1,9 +1,9 @@
 #include "memory.h"
 #include "../userspace/mmu.h"
 #include "../drivers/console/console.h"
+#include "../drivers/devicetree/tree.h"
 
-// TODO: figure out how to make this dependent on how much memory is detected
-#define HEAP_SIZE 0x100000
+unsigned long long HEAP_SIZE;
 
 // Header for malloc allocations.
 struct s_malloc_pointer_header {
@@ -31,13 +31,32 @@ enum {
 // init_heap_metadata(void*) -> void
 // Initialised the heap by allocating space for page metadata.
 void init_heap_metadata(void* fdt) {
-    unsigned long long page_count = (HEAP_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
+    fdt_t devicetree = verify_fdt(fdt);
+    if (devicetree.header == (void*) 0) {
+        console_puts("Failed to initialise heap: device tree header is invalid\n");
+        return;
+    }
+
+    // TODO: check if the device tree is in the range
+    unsigned int address_cells = be_to_le(32, fdt_get_property(&devicetree, (void*) 0, "#address-cells").data);
+    unsigned int size_cells = be_to_le(32, fdt_get_property(&devicetree, (void*) 0, "#size-cells").data);
+    struct fdt_property reg = fdt_get_property(&devicetree, fdt_find(&devicetree, "memory", (void*) 0), "reg");
+
+    HEAP_SIZE = 0;
+    for (int i = 4 * address_cells; i < reg.len; i += 4 * (size_cells + address_cells)) {
+        HEAP_SIZE += be_to_le(32 * size_cells, reg.data + i);
+    }
+    console_printf("Heap has %llx bytes of memory\n", HEAP_SIZE);
+
+    unsigned long long page_count = HEAP_SIZE / PAGE_SIZE / PAGE_SIZE;
     pages_start += page_count;
     volatile unsigned long long* ptr = (unsigned long long*) &heap_bottom;
 
     for (; ptr < (unsigned long long*) pages_start; ptr++) {
         *ptr = 0;
     }
+
+    console_puts("Initialised heap\n");
 }
 
 // is_free(page_t*) -> char
@@ -62,7 +81,7 @@ char is_last(page_t* ptr) {
 }
 
 static void mark_pages_as_used_unchecked(void* ptr, unsigned long long page_count) {
-    char* cp = ((char*) &pages_bottom) + (((char*) ptr) - (char*) pages_start) / PAGE_SIZE;
+    char* cp = ((char*) &pages_bottom) + (((unsigned long long) ptr) - (unsigned long long) pages_start) / PAGE_SIZE;
     char* end = cp + page_count;
     for (; cp < end; cp++) {
         *cp = PAGE_ALLOC_BYTE_USED;
@@ -72,9 +91,9 @@ static void mark_pages_as_used_unchecked(void* ptr, unsigned long long page_coun
 
 // mark_pages_as_used(void*, unsigned long long) -> void
 // Marks the given pages as used.
-void mark_pages_as_used(void* ptr, unsigned long long page_count) {
+void mark_pages_as_used(void* ptr, unsigned long long size) {
     ptr = (void*) ((unsigned long long) ptr & ~(PAGE_SIZE - 1));
-    page_count = (page_count + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
+    unsigned long long page_count = (size + PAGE_SIZE - 1) / PAGE_SIZE;
     mark_pages_as_used_unchecked(ptr, page_count);
 }
 
@@ -146,7 +165,7 @@ void* alloc_page(unsigned long long page_count) {
     }
 
     // No pointer was found; return null
-    console_printf("[alloc_page] Error: Could not allocate %lli consecutive pages!\n", page_count);
+    console_printf("[alloc_page] Error: Could not allocate %llx consecutive pages!\n", page_count);
     return (void*) 0;
 }
 
@@ -157,7 +176,7 @@ void dealloc_page(void* ptr) {
         return;
 
     page_t* page_ptr = (page_t*) ptr;
-    char* cp = ((char*) &pages_bottom) + (((char*) page_ptr) - (char*) pages_start) / PAGE_SIZE;
+    char* cp = ((char*) &pages_bottom) + (((unsigned long long) page_ptr) - (unsigned long long) pages_start) / PAGE_SIZE;
 
     while (!is_last(page_ptr)) {
         // Mark pages as free

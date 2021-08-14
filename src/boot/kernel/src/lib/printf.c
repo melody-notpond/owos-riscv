@@ -36,7 +36,7 @@ void func_vprintf(void (*write)(char), char* format, va_list va) {
                     write('0');
                     write('x');
                     for (unsigned long long i = 15 * 4; i; i -= 4) {
-                        write("0123456789abcdef"[(p & (0xf << i)) >> i]);
+                        write("0123456789abcdef"[((p & (0xf << i)) >> i) & 0xf]);
                     }
                     write("0123456789abcdef"[p & 0xf]);
                     break;
