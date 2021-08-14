@@ -10,7 +10,7 @@ extern generic_filesystem_t console_fs;
 // console_generic_file_write(generic_file_t*) -> int
 // Reads a character from the console.
 int console_generic_file_read(generic_file_t* _) {
-    return console_getc();
+    return console_getc_noecho();
 }
 
 // console_generic_file_write(generic_file_t*, int) -> int
@@ -118,39 +118,5 @@ void console_put_hexdump(void* data, unsigned long long size) {
 
         console_puts("|\n");
     }
-}
-
-// console_readline(char*) -> char*
-// Reads a line from console input.
-char* console_readline(char* prompt) {
-    console_puts(prompt);
-    unsigned long long buffer_size = 16;
-    unsigned long long buffer_len = 0;
-    char* buffer = malloc(buffer_size);
-    buffer[0] = 0;
-
-    while (1) {
-        char c = console_getc_noecho();
-
-        if (c == 0x0d)
-            break;
-        else if (c == 0x7f) {
-            if (buffer_len > 0) {
-                buffer[--buffer_len] = 0;
-                console_puts("\x1b[D \x1b[D");
-            }
-
-        // TODO: arrow controls (or maybe not idk)
-        } else if (c != 0x1b) {
-            sbi_console_putchar(c);
-            buffer[buffer_len++] = c;
-            if (buffer_len >= buffer_size)
-                buffer = realloc(buffer, (buffer_size <<= 1));
-            buffer[buffer_len] = 0;
-        }
-    }
-
-    sbi_console_putchar('\n');
-    return buffer;
 }
 

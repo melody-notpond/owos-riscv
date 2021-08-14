@@ -30,6 +30,13 @@ impl Write for FileDescriptor {
     }
 }
 
+/// Reads data from the given file descriptor.
+pub fn read<T>(fd: FileDescriptor, data: *mut T, size: usize) {
+    unsafe {
+        syscall(0, fd.0 as u64, data as u64, size as u64, 0, 0, 0);
+    }
+}
+
 /// Writes data to the given file descriptor.
 pub fn write<T>(fd: FileDescriptor, data: *const T, size: usize) {
     unsafe {
@@ -41,10 +48,12 @@ pub const PROT_READ: u8 = 1;
 pub const PROT_WRITE: u8 = 2;
 pub const PROT_EXEC: u8 = 4;
 
+/// Maps a memory address with the given length and protections.
 pub unsafe fn mmap<T>(length: usize, prot: u8) -> *mut T {
     syscall(9, 0, length as u64, prot as u64, 0, 0, 0) as *mut T
 }
 
+/// Unmaps the given memory address.
 pub unsafe fn munmap<T>(addr: *mut T, length: usize) {
     syscall(11, addr as u64, length as u64, 0, 0, 0, 0);
 }
