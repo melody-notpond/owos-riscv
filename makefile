@@ -2,13 +2,6 @@ CODE=src/
 EMU=qemu-system-riscv64
 EFLAGS=-machine virt -cpu rv64 -bios opensbi-riscv64-generic-fw_dynamic.bin -m 256m -nographic -device virtio-blk-device,scsi=off,drive=foo -global virtio-mmio.force-legacy=false -device virtio-gpu-device -s #-S
 KERNELARGS="uwu"
-RUSTBUILD=debug
-RUSTFLAGSPRE=
-ifeq ($(RUSTBUILD), release)
-	RUSTFLAGS=--release $(RUSTFLAGSPRE)
-else
-	RUSTFLAGS=$(RUSTFLAGSPRE)
-endif
 
 all: kernel
 
@@ -41,15 +34,15 @@ simple: dirs
 	mv $(CODE)root/bin/simple/simple build/root/bin
 
 lil: dirs
-	cd $(CODE)root/bin/lil && cargo +nightly build $(RUSTFLAGS)
-	cp $(CODE)root/bin/lil/target/riscv64gc-unknown-none-elf/$(RUSTBUILD)/lil build/root/bin
+	cd $(CODE)root/bin/lil && zig build
+	mv $(CODE)root/bin/lil/zig-out/bin/lil build/root/bin/
 
 init: dirs
 	cd $(CODE)root/sbin/init && $(MAKE)
-	mv $(CODE)root/sbin/init/init build/root/sbin
+	mv $(CODE)root/sbin/init/init build/root/sbin/
 
 dirs:
-	mkdir -p build/root/bin/ build/boot/ build/root/etc/ build/root/sbin
+	mkdir -p build/root/bin/ build/boot/ build/root/etc/ build/root/sbin/
 
 clean:
 	-rm -r build/

@@ -6,3 +6,5 @@ Cargo.lock
 obj/
 mnt/
 tags
+zig-cache/
+zig-out/

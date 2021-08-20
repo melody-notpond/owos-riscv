@@ -10,7 +10,7 @@ extern generic_filesystem_t console_fs;
 // console_generic_file_write(generic_file_t*) -> int
 // Reads a character from the console.
 int console_generic_file_read(generic_file_t* _) {
-    return console_getc_noecho();
+    return sbi_console_getchar();
 }
 
 // console_generic_file_write(generic_file_t*, int) -> int

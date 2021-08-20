@@ -94,7 +94,6 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
         }
 
         memcpy(pages_start + initial, elf->data[i], elf->program_headers[i].file_size);
-        console_printf("size: %llx\n", elf->program_headers[i].file_size);
 
         if (last_pointer < ptr)
             last_pointer = (void*) (((unsigned long long) ptr + PAGE_SIZE - 1) & ~0xfff);
