@@ -1,17 +1,13 @@
-const std = @import("stdowo");
-const write = std.write;
+const owo = @import("stdowo");
+const write = owo.write;
 
-pub fn main() anyerror!void {
-    const slice = "uwu\n";
-    write(1, slice, slice.len);
+const std = @import("std");
+
+comptime {
+    @export(owo._start, .{ .name = "_start" });
 }
 
-export fn _start() callconv(.C) noreturn {
-    main() catch unreachable;
-    const exit_syscall: u64 = 60;
-    asm volatile ("ecall"
-        :
-        : [exit_syscall] "{a7}" (exit_syscall)
-    );
-    unreachable;
+export fn main() void {
+    const slice = "uwu\n";
+    write(1, slice, slice.len);
 }

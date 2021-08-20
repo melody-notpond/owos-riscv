@@ -8,3 +8,15 @@ pub fn write(fd: u32, buffer: []const u8, size: usize) void {
           [size] "{a2}" (size)
     );
 }
+
+extern fn main() void;
+
+pub fn _start() callconv(.Naked) noreturn {
+    main();
+    const exit_syscall: u64 = 60;
+    asm volatile ("ecall"
+        :
+        : [exit_syscall] "{a7}" (exit_syscall)
+    );
+    unreachable;
+}
