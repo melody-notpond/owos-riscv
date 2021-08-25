@@ -81,8 +81,7 @@ elf_t load_executable_elf_from_file(generic_file_t* dir, char* path) {
     // Load program data
     elf.data = malloc(header.program_header_num * sizeof(void*));
     for (int i = 0; i < header.program_header_num; i++) {
-        unsigned long long page_num = (elf.program_headers[i].file_size + PAGE_SIZE - 1) / PAGE_SIZE;
-        elf.data[i] = alloc_page(page_num);
+        elf.data[i] = malloc(elf.program_headers[i].file_size);
         generic_file_seek(file, elf.program_headers[i].offset);
         generic_file_read(file, elf.data[i], elf.program_headers[i].file_size);
     }
@@ -96,7 +95,7 @@ elf_t load_executable_elf_from_file(generic_file_t* dir, char* path) {
 // Frees memory associated with an elf structure.
 void free_elf(elf_t* elf) {
     for (int i = 0; i < elf->header.program_header_num; i++) {
-        dealloc_page(elf->data[i]);
+        free(elf->data[i]);
     }
     free(elf->data);
     free(elf->program_headers);

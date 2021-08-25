@@ -235,13 +235,15 @@ void* malloc(unsigned long int n) {
     // Don't allocate zero sized memory
     if (n == 0) return (void*) 0;
 
+    unsigned long long ra;
+    asm volatile("mv %0, ra" : "=r" (ra));
     MALLOC_GET_FROM_BUCKET(16);
     MALLOC_GET_FROM_BUCKET(32);
     MALLOC_GET_FROM_BUCKET(64);
     MALLOC_GET_FROM_BUCKET(128);
     MALLOC_GET_FROM_BUCKET(256);
     MALLOC_GET_FROM_BUCKET(512);
-    unsigned long long page_count = (n + PAGE_SIZE - 1) / PAGE_SIZE;
+    unsigned long long page_count = (n + sizeof(struct s_malloc_pointer_header) + PAGE_SIZE - 1) / PAGE_SIZE;
     struct s_malloc_pointer_header* header = alloc_page(page_count);
     header->size = n;
     return header + 1;

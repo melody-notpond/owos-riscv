@@ -6,7 +6,6 @@
 #include "../drivers/filesystems/generic_file.h"
 
 #define FILE_DESCRIPTOR_COUNT 1024
-#define FILE_DESCRIPTOR_PAGE_COUNT (FILE_DESCRIPTOR_COUNT * sizeof(void*) / PAGE_SIZE)
 
 #define PROCESS_REGISTER_ZERO   0
 #define PROCESS_REGISTER_RA     1

@@ -12,13 +12,8 @@ pid_t* job_queue;
 // init_process_table() -> void
 // Initialises the process table.
 void init_process_table() {
-    unsigned long long page_num = (MAX_PID * sizeof(process_t) + PAGE_SIZE - 1) / PAGE_SIZE;
-    process_table = alloc_page(page_num);
-    MAX_PID = page_num * PAGE_SIZE / sizeof(process_t);
-
-    page_num = (JOB_QUEUE_SIZE * sizeof(pid_t) + PAGE_SIZE - 1) / PAGE_SIZE;
-    job_queue = alloc_page(page_num);
-    JOB_QUEUE_SIZE = page_num * PAGE_SIZE / sizeof(pid_t);
+    process_table = malloc(MAX_PID * sizeof(process_t));
+    job_queue = malloc(JOB_QUEUE_SIZE * sizeof(pid_t));
 }
 
 // spawn_process(pid_t) -> pid_t
@@ -73,9 +68,9 @@ pid_t load_elf_as_process(pid_t parent_pid, elf_t* elf, unsigned int stack_page_
         return pid;
 
     process_t* process = fetch_process(pid);
-    process->file_descriptors = alloc_page(FILE_DESCRIPTOR_PAGE_COUNT);
+    process->file_descriptors = malloc(FILE_DESCRIPTOR_COUNT * sizeof(void*));
     process->mmu_data = create_mmu_top();
-    for (unsigned long long i = 0; i < FILE_DESCRIPTOR_PAGE_COUNT; i++) {
+    for (unsigned long long i = 0; i < FILE_DESCRIPTOR_COUNT * sizeof(void*); i++) {
         void* map = (void*) (process->file_descriptors) + i * PAGE_SIZE;
         map_mmu(process->mmu_data, map, map, MMU_FLAG_READ | MMU_FLAG_WRITE);
     }
@@ -161,7 +156,7 @@ void kill_process(pid_t pid) {
         for (unsigned long long i = 0; i < FILE_DESCRIPTOR_COUNT; i++) {
             close_generic_file(process->file_descriptors[i]);
         }
-        dealloc_page(process->file_descriptors);
+        free(process->file_descriptors);
     }
 
     process->state = PROCESS_STATE_DEAD;

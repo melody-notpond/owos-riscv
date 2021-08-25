@@ -157,13 +157,13 @@ uart_mmio_t* init_ns16550(fdt_t* fdt, void* node) {
         .rx_queue_length = 0,
         .rx_queue_capacity = 4096,
     };
-    mmio.tx_queue = alloc_page(sizeof(uart_tx_queue_entry_t) * mmio.tx_queue_capacity / PAGE_SIZE);
+    mmio.tx_queue = malloc(sizeof(uart_tx_queue_entry_t) * mmio.tx_queue_capacity);
     mmio.rx_queue = malloc(sizeof(char) * mmio.rx_queue_capacity);
 
     while (interrupts_raw.len) {
         // TODO: figure out how to determine the format of interrupts
         if (register_mei_handler(be_to_le(32, interrupts_raw.data), 7, uart_mei_handler, &mmio)) {
-            dealloc_page(mmio.tx_queue);
+            free(mmio.tx_queue);
             free(mmio.rx_queue);
             return (void*) 0;
         }
