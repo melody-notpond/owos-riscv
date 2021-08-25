@@ -9,14 +9,19 @@ unsigned long long HEAP_SIZE;
 struct s_malloc_pointer_header {
     unsigned long long size;
     struct s_malloc_pointer_header* next;
-    unsigned char used;
 };
 
 // Represents a page.
 typedef unsigned char page_t[PAGE_SIZE];
 
-// Heap bottom
-extern struct s_malloc_pointer_header heap_bottom;
+struct {
+    struct s_malloc_pointer_header* bucket_16;
+    struct s_malloc_pointer_header* bucket_32;
+    struct s_malloc_pointer_header* bucket_64;
+    struct s_malloc_pointer_header* bucket_128;
+    struct s_malloc_pointer_header* bucket_256;
+    struct s_malloc_pointer_header* bucket_512;
+} global_allocator = { 0 };
 
 // Pages bottom
 extern page_t pages_bottom;
@@ -50,7 +55,7 @@ void init_heap_metadata(void* fdt) {
 
     unsigned long long page_count = HEAP_SIZE / PAGE_SIZE / PAGE_SIZE;
     pages_start += page_count;
-    volatile unsigned long long* ptr = (unsigned long long*) &heap_bottom;
+    volatile unsigned long long* ptr = (unsigned long long*) &pages_bottom;
 
     for (; ptr < (unsigned long long*) pages_start; ptr++) {
         *ptr = 0;
@@ -189,45 +194,60 @@ void dealloc_page(void* ptr) {
     *cp = PAGE_ALLOC_BYTE_FREE;
 }
 
+struct s_malloc_pointer_header* memory_format_new_page(unsigned long int size) {
+    void* page = alloc_page(1);
+    if (page == (void*) 0)
+        return page;
+    unsigned long long node_size = (size + sizeof(struct s_malloc_pointer_header) + 15) & ~15;
+    struct s_malloc_pointer_header* header = (void*) 0;
+    for (unsigned long long i = 0; i < PAGE_SIZE; i += node_size) {
+        if (header) {
+            header->next = page + i;
+            header = header->next;
+        } else header = page + i;
+        header->size = size;
+    }
+
+    return page;
+}
+
+#define MALLOC_GET_FROM_BUCKET(size)                                                                \
+do {                                                                                                \
+    if (n <= size) {                                                                                \
+        if (!global_allocator.bucket_##size) {                                                      \
+            global_allocator.bucket_##size = memory_format_new_page(size);                          \
+                                                                                                    \
+            if (!global_allocator.bucket_##size) {                                                  \
+                console_printf("[malloc] Out of memory! Attempted to allocate %lx bytes.\n", n);    \
+                return (void*) 0;                                                                   \
+            }                                                                                       \
+        }                                                                                           \
+                                                                                                    \
+        struct s_malloc_pointer_header* header = global_allocator.bucket_##size;                    \
+        global_allocator.bucket_##size = global_allocator.bucket_##size->next;                      \
+        return header + 1;                                                                          \
+    }                                                                                               \
+} while (0)
+
 // malloc(unsigned long int) -> void*
 // Allocates a small piece of memory
 void* malloc(unsigned long int n) {
     // Don't allocate zero sized memory
-    if (n == 0)
-        return (void*) 0;
+    if (n == 0) return (void*) 0;
 
-    // Calculate size with padding
-    unsigned long long size = n + sizeof(struct s_malloc_pointer_header);
-    size = (size + 15) & ~15;
-
-    // Iterate until the end of the heap is reached
-    struct s_malloc_pointer_header* ptr = &heap_bottom;
-    while (ptr + size < (struct s_malloc_pointer_header*) &pages_bottom) {
-        // Check if the current header is used
-        if (!ptr->used && (ptr->size == 0 || n <= ptr->size)) {
-            // Update metadata
-            if (ptr->size == 0)
-                ptr->size = n;
-            if (ptr->next == 0)
-                ptr->next = ((void*) ptr) + size;
-            ptr->used = 1;
-            return ptr + 1;
-        }
-
-        // Get next pointer
-        if (ptr->next != 0)
-            ptr = ptr->next;
-        else break;
-    }
-
-    // Error message on out of memory
-    if (ptr + size >= (struct s_malloc_pointer_header*) &pages_bottom) {
-        unsigned long long ra;
-        asm("mv %0, ra" : "=r"(ra));
-        console_printf("[malloc] Out of memory! Attempted to load address 0x%p with size 0x%llx!\nCalled from 0x%llx\n", ptr, size, ra);
-    }
-    return (void*) 0;
+    MALLOC_GET_FROM_BUCKET(16);
+    MALLOC_GET_FROM_BUCKET(32);
+    MALLOC_GET_FROM_BUCKET(64);
+    MALLOC_GET_FROM_BUCKET(128);
+    MALLOC_GET_FROM_BUCKET(256);
+    MALLOC_GET_FROM_BUCKET(512);
+    unsigned long long page_count = (n + PAGE_SIZE - 1) / PAGE_SIZE;
+    struct s_malloc_pointer_header* header = alloc_page(page_count);
+    header->size = n;
+    return header + 1;
 }
+
+#undef MALLOC_GET_FROM_BUCKET
 
 // realloc(void*, unsigned long int) -> void*
 // Reallocates a piece of memory, returning the new pointer.
@@ -257,8 +277,37 @@ void free(void* ptr) {
         return;
 
     struct s_malloc_pointer_header* header = ptr - sizeof(struct s_malloc_pointer_header);
-    if (header->used) {
-        header->used = 0;
+    switch (header->size) {
+        case 16:
+            header->next = global_allocator.bucket_16;
+            global_allocator.bucket_16 = header;
+            break;
+        case 32:
+            header->next = global_allocator.bucket_32;
+            global_allocator.bucket_32 = header;
+            break;
+        case 64:
+            header->next = global_allocator.bucket_64;
+            global_allocator.bucket_64 = header;
+            break;
+        case 128:
+            header->next = global_allocator.bucket_128;
+            global_allocator.bucket_128 = header;
+            break;
+        case 256:
+            header->next = global_allocator.bucket_256;
+            global_allocator.bucket_256 = header;
+            break;
+        case 512:
+            header->next = global_allocator.bucket_512;
+            global_allocator.bucket_512 = header;
+            break;
+        default:
+            if (header->size > 512) {
+                dealloc_page(header);
+            } else {
+                console_printf("[free] Warning: attempted to free memory that likely was not allocated by malloc: %p\n", ptr);
+            }
     }
 }
 
@@ -290,21 +339,4 @@ void* memset(void* p, int i, unsigned long int n) {
         *p1 = c;
     }
     return p;
-}
-
-// memsize() -> unsigned long long
-// Returns the size of the heap in bytes.
-unsigned long long memsize() {
-    return ((unsigned long long) &pages_bottom) - ((unsigned long long) &heap_bottom);
-}
-
-// memfree() -> unsigned long long
-// Returns the free space on the kernel heap.
-unsigned long long memfree() {
-    unsigned long long free = memsize();
-    for (struct s_malloc_pointer_header* p = &heap_bottom; p && (void*) p < (void*) &pages_bottom; p = p->next) {
-        if (p->used)
-            free -= p->size;
-    }
-    return free;
 }

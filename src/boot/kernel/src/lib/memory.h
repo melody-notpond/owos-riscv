@@ -43,13 +43,5 @@ void* memcpy(void* dest, const void* src, unsigned long int n);
 // Sets a value over a space. Returns the original pointer.
 void* memset(void* p, int i, unsigned long int n);
 
-// memsize() -> unsigned long long
-// Returns the size of the heap in bytes.
-unsigned long long memsize();
-
-// memfree() -> unsigned long long
-// Returns the free space on the kernel heap.
-unsigned long long memfree();
-
 #endif /* KERNEL_MEMORY_H */
 

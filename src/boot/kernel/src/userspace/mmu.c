@@ -131,7 +131,6 @@ void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt) {
     extern int ro_data_start;
     extern int sdata_start;
     extern int stack_start;
-    extern int heap_bottom;
     extern int pages_bottom;
     extern void* pages_start;
 
@@ -144,8 +143,7 @@ void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt) {
     mmu_map_range_identity(top, &data_start, &ro_data_start,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &ro_data_start, &sdata_start,   MMU_FLAG_GLOBAL | MMU_FLAG_READ);
     mmu_map_range_identity(top, &sdata_start, &stack_start,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, &stack_start, &heap_bottom,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
-    mmu_map_range_identity(top, &heap_bottom, &pages_bottom,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, &stack_start, &pages_bottom,    MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
     mmu_map_range_identity(top, &pages_bottom, pages_start,     MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
 
     // Map virtio stuff

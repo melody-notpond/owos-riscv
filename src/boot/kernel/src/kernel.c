@@ -51,9 +51,6 @@ void kinit(unsigned long long hartid, void* fdt) {
     trap_t* trap = &trap_structs[hartid];
     asm volatile("csrw sscratch, %0" : "=r" (trap));
 
-    // Initialise heap
-    console_printf("Heap has 0x%llx bytes.\n", memsize());
-
     // Initialise process table
     init_process_table();
 
@@ -103,7 +100,6 @@ void kinit(unsigned long long hartid, void* fdt) {
 
 void kmain() {
     console_puts("Finished initialisation.\n");
-    console_printf("Heap has 0x%llx bytes free.\n", memfree());
 
     // Mount root file system
     struct s_dir_entry entry = generic_dir_lookup(root, ROOT_DISC);
