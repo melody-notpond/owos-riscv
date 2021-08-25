@@ -8,7 +8,8 @@
 unsigned long long PLIC_BASE = 0;
 
 // Interrupt handlers
-void (*mei_interrupt_handlers[PLIC_COUNT])(unsigned int) = { 0 };
+void (*mei_interrupt_handlers[PLIC_COUNT])(unsigned int, void*) = { 0 };
+void* mei_callback_data[PLIC_COUNT] = { 0 };
 
 // get_context_enable_bits(unsigned long long) -> volatile unsigned int*
 // Gets a volatile pointer to the interrupt enable bits for a given context.
@@ -28,12 +29,13 @@ volatile unsigned int* get_context_claim_pointer(unsigned long long context) {
     return (volatile void*) (PLIC_BASE + PLIC_CLAIM_OFFSET + context * 0x1000);
 }
 
-// register_mei_handler(unsigned int, unsigned char, void (*)(unsigned int)) -> char
+// register_mei_handler(unsigned int, unsigned char, void (*)(unsigned int, void*), void*) -> char
 // Registers a machine external interrupt with a given mei id, priority, and handler. If the priority is 0, then the interrupt is disabled. Returns 0 on successful registration, 1 on failure.
-char register_mei_handler(unsigned int mei_id, unsigned char priority, void (*mei_handler)(unsigned int)) {
+char register_mei_handler(unsigned int mei_id, unsigned char priority, void (*mei_handler)(unsigned int, void*), void* callback_data) {
     // Register
     if (0 < mei_id && mei_id <= PLIC_COUNT && mei_interrupt_handlers[mei_id - 1] == 0) {
         mei_interrupt_handlers[mei_id - 1] = mei_handler;
+        mei_callback_data[mei_id - 1] = callback_data;
         *(((unsigned int*) PLIC_BASE) + mei_id) = priority;
         return 0;
     }
@@ -54,9 +56,9 @@ void handle_mei() {
 #endif
 
     // Call handler if available
-    void (*mei_handler)(unsigned int) = mei_interrupt_handlers[mei_id - 1];
+    void (*mei_handler)(unsigned int, void*) = mei_interrupt_handlers[mei_id - 1];
     if (mei_handler)
-        mei_handler(mei_id);
+        mei_handler(mei_id, mei_callback_data[mei_id - 1]);
 }
 
 // swap_process(trap_t*) -> void

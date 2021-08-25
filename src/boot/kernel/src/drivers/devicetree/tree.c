@@ -147,9 +147,9 @@ void dump_fdt(fdt_t* fdt, void* node) {
 // fdt_find(fdt_t*, char*, void*) -> void*
 // Finds a device tree node with the given name. Returns null on failure.
 void* fdt_find(fdt_t* fdt, char* name, void* last) {
-    if (last == (void*) 0)
+    if (last == (void*) 0) {
         last = fdt->structure_block;
-    else {
+    } else {
         last += 4;
         char* c = last;
         while (*c++);
@@ -163,14 +163,14 @@ void* fdt_find(fdt_t* fdt, char* name, void* last) {
                 char* c = last + 4;
                 char* temp_name = name;
 
-                while (*c != '@' && *temp_name) {
+                while (*c != '\0' && *c != '@' && *temp_name) {
                     if (*c != *temp_name)
                         break;
                     c++;
                     temp_name++;
                 }
 
-                if (*c == '@' && *temp_name == '\0')
+                if ((*c == '\0' || *c == '@') && *temp_name == '\0')
                     return last;
 
                 while (*c++);
@@ -181,6 +181,78 @@ void* fdt_find(fdt_t* fdt, char* name, void* last) {
 
             case FDT_END_NODE:
                 last += 4;
+                break;
+
+            case FDT_PROP:
+                last += 4;
+                unsigned int len = be_to_le(32, last);
+                last += 4;
+                unsigned int name_offset = be_to_le(32, last);
+                last += 4;
+                last = (void*) ((unsigned long long) (last + len + 3) & ~0x3);
+                break;
+
+            case FDT_NOP:
+                last += 4;
+                break;
+
+            case FDT_END:
+                break;
+        }
+    }
+
+    return (void*) 0;
+}
+
+// fdt_path(fdt_t*, char*, void*) -> void*
+// Finds a device tree node with the given path. Returns null on failure.
+void* fdt_path(fdt_t* fdt, char* path, void* last) {
+    if (last == (void*) 0 || path[0] == '/') {
+        last = fdt->structure_block;
+        path += path[0] == '/';
+    } else {
+        last += 4;
+        char* c = last;
+        while (*c++);
+        last = (void*) ((unsigned long long) (c + 4) & ~0x3);
+    }
+
+    unsigned long long current;
+    unsigned long long depth = 1;
+    unsigned long long intended_depth = 1;
+    while ((current = be_to_le(32, last)) != FDT_END) {
+        switch ((fdt_node_type_t) current) {
+            case FDT_BEGIN_NODE: {
+                char* c = last + 4;
+                char* temp_name = path;
+
+                while (*c && *temp_name && *temp_name != '/') {
+                    if (*c != *temp_name)
+                        break;
+                    c++;
+                    temp_name++;
+                }
+
+                if (*c == '\0' && *temp_name == '\0')
+                    return last;
+                else if (*c == '\0' && *temp_name == '/') {
+                    intended_depth++;
+                    path = temp_name + 1;
+                }
+                depth++;
+
+                while (*c++);
+
+                last = (void*) ((unsigned long long) (c + 3) & ~0x3);
+                break;
+            }
+
+            case FDT_END_NODE:
+                last += 4;
+                depth--;
+                if (depth < intended_depth) {
+                    return (void*) 0;
+                }
                 break;
 
             case FDT_PROP:

@@ -60,6 +60,10 @@ void dump_fdt(fdt_t* fdt, void*);
 // Finds a device tree node with the given name. Returns null on failure.
 void* fdt_find(fdt_t* fdt, char* name, void* last);
 
+// fdt_path(fdt_t*, char*, void*) -> void*
+// Finds a device tree node with the given path. Returns null on failure.
+void* fdt_path(fdt_t* fdt, char* path, void* last);
+
 // fdt_get_node_addr(void*) -> unsigned long long
 // Gets the address after the @ sign in a device tree node.
 unsigned long long fdt_get_node_addr(void* node);

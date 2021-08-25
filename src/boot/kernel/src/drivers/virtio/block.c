@@ -40,11 +40,11 @@ typedef struct __attribute__((__packed__, aligned(4))) {
 // Devices
 virtio_block_device_t block_devices[VIRTIO_DEVICE_COUNT] = { { 0 } };
 
-// virtio_block_mei_handler(unsigned int) -> void
+// virtio_block_mei_handler(void*) -> void
 // Handles a machine external interrupt for a virtio block device.
-void virtio_block_mei_handler(unsigned int mei_id) {
+void virtio_block_mei_handler(unsigned int _, void* block_device) {
     // Acknowledge the interrupt
-    volatile virtio_block_device_t* device = &block_devices[mei_id - 1];
+    volatile virtio_block_device_t* device = block_device;
     unsigned int status = device->mmio->interrupt_status;
     device->mmio->interrupt_ack = status;
 
@@ -80,7 +80,7 @@ char virtio_init_block_device(volatile virtio_mmio_t* mmio) {
     };
 
     // Add interrupt
-    if (register_mei_handler(i + 1, 7, virtio_block_mei_handler)) {
+    if (register_mei_handler(i + 1, 7, virtio_block_mei_handler, block_devices + i)) {
         console_puts("Warning: interrupt handler for block device is unregistered\n");
     }
 

@@ -2,6 +2,7 @@
 #include "drivers/filesystems/generic_file.h"
 #include "drivers/generic_block.h"
 #include "drivers/console/console.h"
+#include "drivers/console/uart.h"
 #include "drivers/devicetree/tree.h"
 #include "drivers/virtio/block.h"
 #include "drivers/virtio/virtio.h"
@@ -22,6 +23,16 @@ void kinit(unsigned long long hartid, void* fdt) {
     fdt_t devicetree = verify_fdt(fdt);
     console_printf("Initialising kernel with hartid 0x%llx and device tree located at %p\n", hartid, devicetree.header);
     dump_fdt(&devicetree, (void*) 0);
+
+    void* chosen = fdt_path(&devicetree, "/chosen", (void*) 0);
+    struct fdt_property stdout_path = fdt_get_property(&devicetree, chosen, "stdout-path");
+    uart_mmio_t* uart = init_uart(&devicetree, stdout_path.data);
+
+    if (!uart) {
+        console_puts("Failed to initialised UART port.\n");
+    } else {
+        console_puts("UART port initialised successfully\n");
+    }
 
     // Init console file system
     console_fs = (generic_filesystem_t) {

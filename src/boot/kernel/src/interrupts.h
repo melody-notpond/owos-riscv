@@ -35,9 +35,9 @@ volatile unsigned int* get_context_priority_threshold(unsigned long long context
 // Gets a volatile pointer to the interupt claim register for a given context.
 volatile unsigned int* get_context_claim_pointer(unsigned long long context);
 
-// register_mei_handler(unsigned int, unsigned char, void (*)(unsigned int)) -> char
+// register_mei_handler(unsigned int, unsigned char, void (*)(unsigned int, void*), void*) -> char
 // Registers a machine external interrupt with a given mei id, priority, and handler. If the priority is 0, then the interrupt is disabled. Returns 0 on successful registration, 1 on failure.
-char register_mei_handler(unsigned int mei_id, unsigned char priority, void (*mei_handler)(unsigned int));
+char register_mei_handler(unsigned int mei_id, unsigned char priority, void (*mei_handler)(unsigned int, void*), void* callback_data);
 
 // swap_process(trap_t*) -> void
 // Swaps the current process with the next process in the queue.

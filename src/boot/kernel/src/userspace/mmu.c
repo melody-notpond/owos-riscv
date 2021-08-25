@@ -136,7 +136,7 @@ void mmu_map_kernel(mmu_level_1_t* top, fdt_header_t* fdt) {
     extern void* pages_start;
 
     // Map fdt
-    mmu_map_range_identity(top, fdt, ((void*) fdt) + be_to_le(32, fdt->totalsize), MMU_FLAG_GLOBAL | MMU_FLAG_READ | MMU_FLAG_WRITE);
+    mmu_map_range_identity(top, fdt, ((void*) fdt) + be_to_le(32, fdt->totalsize), MMU_FLAG_GLOBAL | MMU_FLAG_READ);
     mark_pages_as_used(fdt, be_to_le(32, fdt->totalsize));
 
     // Map kernel
